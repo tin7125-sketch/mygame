@@ -144,8 +144,8 @@
         <span>房間：</span><span id="room-code-display" class="room-code">未建立</span>
       </div>
       <button class="btn btn-warning" onclick="selectRole('host')">👑 我是 主持人</button>
-      <button class="btn" onclick="selectRole('p1')">🙋‍♂️ 我是 玩家一</button>
-      <button class="btn" onclick="selectRole('p2')">🙋‍♀️ 我是 玩家二</button>
+      <button class="btn" onclick="selectRole('p1')">🙋‍♂️ 玩家加入遊戲</button>
+      <button class="btn" 
 
       <div id="join-panel" style="display:none; margin-top:15px; padding:15px; background:rgba(255,255,255,0.06); border:1px solid var(--border-color); border-radius:10px;">
         <div style="font-weight:bold; margin-bottom:8px;">🎮 加入遊戲</div>
@@ -366,12 +366,6 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    // 第一次使用時建立預設玩家名稱；若已有名稱則保留。
-    gameRef('playerNames').once('value', snapshot => {
-      if (!snapshot.exists()) {
-        gameRef('playerNames').set({ p1: '玩家一', p2: '玩家二' });
-      }
-    });
 
     let myRole = '';
     let myPlayerId = '';
@@ -379,6 +373,15 @@
     let pendingJoin = false;
     let countdownTimer = null;
     let lastPlayedActionId = null;
+
+    function selectRole(role) {
+      if (role === 'host') {
+        createHostRoom();
+      } else {
+        // 玩家不再手動指定 P1/P2，由房間自動分配空缺的位置。
+        joinPlayer();
+      }
+    }
 
     function randomCode(length = 6) {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -417,9 +420,14 @@
         timerEndsAt: null
       };
 
-      db.ref('rooms/' + myRoomCode + '/gameState').set(initialState).then(() => {
-        enterGameAsRole('host');
-      });
+      db.ref('rooms/' + myRoomCode + '/gameState').set(initialState)
+        .then(() => enterGameAsRole('host'))
+        .catch(err => {
+          console.error(err);
+          alert('❌ 房間建立失敗：' + (err.message || err));
+          myRole = '';
+          myRoomCode = '';
+        });
     }
 
     function joinPlayer() {
@@ -510,7 +518,10 @@
 
     // ================= 3. 即時資料監聽與畫面同步 =================
     function listenToDatabase() {
-      gameRef().on('value', (snapshot) => {
+      const ref = gameRef();
+      if (!ref) return;
+      ref.off('value');
+      ref.on('value', (snapshot) => {
         const data = snapshot.val() || {};
         
         if (data.questionsList && Array.isArray(data.questionsList)) {
@@ -698,7 +709,8 @@
         if (!winner) return;
 
         const qIndex = data.currentQIndex || 0;
-        const currentQ = defaultQuestions[qIndex] || {};
+        const syncedQuestions = Array.isArray(data.questionsList) ? data.questionsList : defaultQuestions;
+        const currentQ = syncedQuestions[qIndex] || {};
         const scoreVal = Number(currentQ.score) || 10;
         const delta = isCorrect ? scoreVal : -scoreVal;
         const currentScore = Number(data[`${winner}Score`]) || 0;
