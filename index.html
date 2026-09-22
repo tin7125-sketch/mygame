@@ -75,7 +75,7 @@
     .btn-buzzer:active { transform: translateY(4px); box-shadow: 0 4px 0 #c0392b; }
     .btn-buzzer:disabled { background: #444; box-shadow: none; color: #888; }
 
-    /* 👑 主持人專屬：直接顯示在畫面上的題庫與即時修改面板 (選手看不到) */
+    /* 👑 主持人專屬：直接顯示在主畫面上的題庫與即時修改面板 */
     .host-direct-panel {
       background: rgba(245, 166, 35, 0.1);
       border: 2px dashed var(--accent-yellow);
@@ -113,6 +113,7 @@
 <body>
 
   <div class="container">
+    <!-- 1. 角色選擇頁面 -->
     <div id="role-select" class="card">
       <div class="title">🎮 多媒體互動搶答系統</div>
       <button class="btn btn-warning" onclick="selectRole('host')">👑 我是 主持人</button>
@@ -120,14 +121,17 @@
       <button class="btn" onclick="selectRole('p2')">🙋‍♀️ 我是 玩家二 (P2)</button>
     </div>
 
+    <!-- 2. 主遊戲畫面 -->
     <div id="game-panel" class="card" style="display: none;">
       <div id="role-display" style="color: #aaa; font-size: 14px; margin-bottom: 8px;"></div>
       
+      <!-- 分數統計區 -->
       <div class="scores">
         <div>P1 得分：<span id="score-p1" style="color:var(--accent-pink)">0</span></div>
         <div>P2 得分：<span id="score-p2" style="color:var(--accent-blue)">0</span></div>
       </div>
 
+      <!-- 題目與價值 -->
       <div style="margin-top: 15px;">
         <div class="q-progress">
           <span id="q-number">題目載入中...</span>
@@ -136,13 +140,16 @@
         <div class="question-text" id="q-title">--</div>
       </div>
 
+      <!-- 高畫質多媒體區域 -->
       <div class="media-box" id="media-container"></div>
 
+      <!-- 選項清單區 -->
       <div class="options-grid" id="options-container"></div>
 
+      <!-- 👑 【主持人專屬】直接顯示在主畫面上的題庫與題目編輯管理面板 -->
       <div id="host-direct-panel" class="host-direct-panel">
         <div class="host-direct-title">
-          <span>🛠️ 題庫與當前題目管理 (選手看不見)</span>
+          <span>🛠️ 題庫與背景設定管理 (選手看不見)</span>
           <div>
             <button class="btn btn-success" style="padding:4px 10px; font-size:11px;" onclick="addNewQuestion()">➕ 新增一題</button>
             <button class="btn btn-danger" style="padding:4px 10px; font-size:11px;" onclick="deleteCurrentQuestion()">🗑️ 刪除本題</button>
@@ -159,12 +166,27 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
           <div>
-            <label class="form-label">上傳新照片/影片：</label>
+            <label class="form-label">上傳題目照片/影片：</label>
             <input type="file" id="edit-media-file" class="form-input-sm" accept="image/*,video/*">
           </div>
           <div>
-            <label class="form-label">或貼上媒體網址：</label>
+            <label class="form-label">或貼上題目媒體網址：</label>
             <input type="text" id="edit-media-url" class="form-input-sm" placeholder="https://...">
+          </div>
+        </div>
+
+        <!-- 🌟 自動背景設定區塊 -->
+        <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; margin: 6px 0; border: 1px dashed var(--accent-blue);">
+          <label class="form-label" style="color: var(--accent-blue); font-weight: bold;">🖼️ 自動更換背景圖片設定：</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+            <div>
+              <label class="form-label">上傳背景圖片檔案：</label>
+              <input type="file" id="edit-bg-file" class="form-input-sm" accept="image/*">
+            </div>
+            <div>
+              <label class="form-label">或貼上背景圖片網址：</label>
+              <input type="text" id="edit-bg-url" class="form-input-sm" placeholder="https://...">
+            </div>
           </div>
         </div>
 
@@ -210,17 +232,20 @@
           </div>
         </div>
 
-        <button class="btn btn-success" style="width:100%; margin-top:8px; font-size:13px;" onclick="applyTempEdit()">🚀 即時儲存並同步更新全場</button>
+        <button class="btn btn-success" style="width:100%; margin-top:8px; font-size:13px;" onclick="applyTempEdit()">🚀 即時儲存並同步更新全場 (含背景)</button>
       </div>
 
+      <!-- 搶答動態訊息 -->
       <div class="status-msg" id="buzzer-status">等待主持人開放搶答...</div>
 
+      <!-- 選手搶答按鈕 -->
       <div id="player-controls" style="display: none;">
         <button id="buzzer-btn" class="btn-buzzer" onclick="pressBuzzer()" disabled>⚡ 搶 答 ⚡</button>
       </div>
     </div>
   </div>
 
+  <!-- 3. 👑 右下角主持快捷控制台 -->
   <div id="host-floating" class="host-floating-panel">
     <div class="host-floating-header">⚡ 搶答與判定快捷列</div>
     <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -240,12 +265,13 @@
   </div>
 
   <script>
-    // ================= 1. 預設題庫 (可動態新增/刪除) =================
+    // ================= 1. 預設題庫 =================
     let defaultQuestions = [
       {
         id: 1,
         title: "請問這隻可愛的狗是什麼品種？",
         media: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800",
+        bg: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200",
         options: ["A. 柴犬", "B. 柯基", "C. 哈士奇", "D. 貴賓狗"],
         answer: "A",
         score: 10,
@@ -256,6 +282,7 @@
         id: 2,
         title: "請問短片中的風景是哪一個國家？",
         media: "https://www.w3schools.com/html/mov_bbb.mp4",
+        bg: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200",
         options: ["A. 日本", "B. 美國", "C. 瑞士", "D. 紐西蘭"],
         answer: "C",
         score: 20,
@@ -299,7 +326,6 @@
       listenToDatabase();
     }
 
-    // 更新主畫面下拉選單（包含題數顯示）
     function updateHostDropdown(totalCount, currentIdx) {
       const dropdown = document.getElementById('direct-q-select');
       if (!dropdown) return;
@@ -318,7 +344,6 @@
       db.ref('gameState').on('value', (snapshot) => {
         const data = snapshot.val() || {};
         
-        // 同步雲端題庫（若主持人有新增或刪除題目）
         if (data.questionsList && Array.isArray(data.questionsList)) {
           defaultQuestions = data.questionsList;
         }
@@ -328,7 +353,7 @@
 
         const qIndex = data.currentQIndex || 0;
         const currentQ = defaultQuestions[qIndex] || defaultQuestions[0] || {
-          title: "請新增題目", media: "", options: ["A", "B", "C", "D"], answer: "A", score: 10
+          title: "請新增題目", media: "", bg: "", options: ["A", "B", "C", "D"], answer: "A", score: 10
         };
 
         updateHostDropdown(defaultQuestions.length, qIndex);
@@ -337,11 +362,19 @@
         document.getElementById('q-number').innerText = `第 ${qIndex + 1} / ${defaultQuestions.length} 題`;
         document.getElementById('q-title').innerText = currentQ.title;
 
+        // 自動更換背景圖片
+        if (currentQ.bg) {
+          document.body.style.backgroundImage = `url('${currentQ.bg}')`;
+        } else {
+          document.body.style.backgroundImage = 'none';
+        }
+
         // 如果是主持人，自動把當前題目帶入修改表單
         if (myRole === 'host') {
           document.getElementById('edit-title').value = currentQ.title || '';
           document.getElementById('edit-score').value = currentQ.score || 10;
           document.getElementById('edit-media-url').value = currentQ.media || '';
+          document.getElementById('edit-bg-url').value = currentQ.bg || '';
           document.getElementById('edit-answer').value = currentQ.answer || 'A';
           document.getElementById('edit-sound-correct').value = currentQ.soundCorrect || '';
           document.getElementById('edit-sound-wrong').value = currentQ.soundWrong || '';
@@ -419,7 +452,7 @@
       });
     }
 
-    // ================= 4. 主持人題庫與題目管理邏輯 =================
+    // ================= 4. 主持人管理邏輯 =================
     function judgeAnswer(isCorrect) {
       db.ref('gameState').once('value', (snapshot) => {
         const data = snapshot.val() || {};
@@ -468,11 +501,11 @@
       });
     }
 
-    // 新增一題
     function addNewQuestion() {
       const newQ = {
         title: "請輸入新題目內容",
         media: "",
+        bg: "",
         options: ["A. 選項一", "B. 選項二", "C. 選項三", "D. 選項四"],
         answer: "A",
         score: 10,
@@ -489,7 +522,6 @@
       });
     }
 
-    // 刪除目前這題
     function deleteCurrentQuestion() {
       if (defaultQuestions.length <= 1) {
         alert("⚠️ 題庫至少需要保留一題！");
@@ -515,7 +547,7 @@
       });
     }
 
-    // 儲存並發布當前題目的修改
+    // 儲存並發布當前題目的修改 (包含背景)
     async function applyTempEdit() {
       db.ref('gameState').once('value', async (snapshot) => {
         const data = snapshot.val() || {};
@@ -540,13 +572,19 @@
           media = await fileToDataURL(mediaFile);
         }
 
-        // 更新對應題目的資料
+        let bg = document.getElementById('edit-bg-url').value;
+        const bgFile = document.getElementById('edit-bg-file').files[0];
+        if (bgFile) {
+          bg = await fileToDataURL(bgFile);
+        }
+
         if (!defaultQuestions[qIndex]) defaultQuestions[qIndex] = {};
         defaultQuestions[qIndex].title = title;
         defaultQuestions[qIndex].score = score;
         defaultQuestions[qIndex].answer = answer;
         defaultQuestions[qIndex].options = options;
         defaultQuestions[qIndex].media = media;
+        defaultQuestions[qIndex].bg = bg;
         defaultQuestions[qIndex].soundCorrect = soundCorrect;
         defaultQuestions[qIndex].soundWrong = soundWrong;
 
@@ -554,7 +592,7 @@
           questionsList: defaultQuestions
         });
 
-        alert("✅ 題庫與當前題目設定已儲存並同步至全場！");
+        alert("✅ 題庫與背景設定已成功儲存並同步至全場！");
       });
     }
 
