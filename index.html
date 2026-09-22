@@ -104,6 +104,30 @@
       backdrop-filter: blur(10px);
       display: none;
     }
+
+    .room-bar { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; margin:10px 0; }
+    .room-code { font-size:20px; font-weight:bold; letter-spacing:2px; color:var(--accent-yellow); }
+    .timer { font-size:56px; font-weight:900; color:var(--accent-yellow); min-height:70px; text-shadow:0 2px 10px rgba(245,166,35,.35); }
+    .timer.danger { color:var(--accent-red); animation:pulse .6s infinite alternate; }
+    .player-list { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+    .player-chip { padding:8px; border:1px solid var(--border-color); border-radius:8px; background:rgba(255,255,255,.05); }
+    .player-chip.connected { border-color:var(--accent-green); }
+    .answer-lock { opacity:.55; pointer-events:none; }
+    .result-banner { padding:12px; border-radius:10px; margin:10px 0; font-weight:bold; background:rgba(46,204,113,.12); border:1px solid var(--accent-green); }
+    .host-floating-panel .btn { margin:0; }
+    @keyframes pulse { from { transform:scale(1); } to { transform:scale(1.06); } }
+    @media (max-width: 600px) {
+      body { padding:10px; }
+      .container { padding-bottom:120px; }
+      .media-box { height:240px; }
+      .options-grid { grid-template-columns:1fr; gap:8px; }
+      .option-item { font-size:19px; padding:16px; }
+      .btn-buzzer { height:180px; font-size:42px; }
+      .scores { font-size:17px; }
+      .question-text { font-size:21px; }
+      .host-floating-panel { left:10px; right:10px; bottom:10px; width:auto; }
+      .player-list { grid-template-columns:1fr; }
+    }
     .host-floating-header { font-weight: bold; color: var(--accent-yellow); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; font-size: 13px; }
   </style>
 
@@ -116,22 +140,30 @@
     <!-- 1. 角色選擇頁面 -->
     <div id="role-select" class="card">
       <div class="title">🎮 多媒體互動搶答系統</div>
+      <div class="room-bar">
+        <span>房間：</span><span id="room-code-display" class="room-code">未建立</span>
+      </div>
       <button class="btn btn-warning" onclick="selectRole('host')">👑 我是 主持人</button>
       <button class="btn" onclick="selectRole('p1')">🙋‍♂️ 我是 玩家一</button>
       <button class="btn" onclick="selectRole('p2')">🙋‍♀️ 我是 玩家二</button>
 
-      <div id="player-name-panel" style="display:none; margin-top:15px; padding:15px; background:rgba(255,255,255,0.06); border:1px solid var(--border-color); border-radius:10px;">
-        <div style="font-weight:bold; margin-bottom:8px;">✏️ 設定你的玩家名稱</div>
-        <input id="player-name-input" type="text" maxlength="20"
-               placeholder="例如：小明"
-               style="width:100%; padding:10px; border-radius:8px; border:1px solid #555; background:#222; color:#fff; font-size:16px; user-select:text;">
-        <button class="btn btn-success" style="width:100%; margin-top:8px;" onclick="confirmPlayerName()">✅ 確認名稱並進入</button>
+      <div id="join-panel" style="display:none; margin-top:15px; padding:15px; background:rgba(255,255,255,0.06); border:1px solid var(--border-color); border-radius:10px;">
+        <div style="font-weight:bold; margin-bottom:8px;">🎮 加入遊戲</div>
+        <input id="room-code-input" type="text" maxlength="8" placeholder="輸入主持人提供的房間代碼"
+               style="width:100%; padding:10px; border-radius:8px; border:1px solid #555; background:#222; color:#fff; font-size:16px; user-select:text; text-transform:uppercase;">
+        <input id="player-name-input" type="text" maxlength="20" placeholder="輸入你的玩家名稱"
+               style="width:100%; margin-top:8px; padding:10px; border-radius:8px; border:1px solid #555; background:#222; color:#fff; font-size:16px; user-select:text;">
+        <button class="btn btn-success" style="width:100%; margin-top:8px;" onclick="confirmPlayerJoin()">✅ 加入遊戲</button>
       </div>
     </div>
 
     <!-- 2. 主遊戲畫面 -->
     <div id="game-panel" class="card" style="display: none;">
       <div id="role-display" style="color: #aaa; font-size: 14px; margin-bottom: 8px;"></div>
+      <div class="room-bar">
+        <span>房間：</span><span id="game-room-code" class="room-code">--</span>
+      </div>
+      <div id="player-list" class="player-list"></div>
       
       <!-- 分數統計區 -->
       <div class="scores">
@@ -242,6 +274,14 @@
 
         <button class="btn btn-success" style="width:100%; margin-top:8px; font-size:13px;" onclick="applyTempEdit()">🚀 即時儲存並同步更新全場 (含背景)</button>
 
+        <div style="margin-top:10px; padding:8px 0; border-bottom:1px dashed #555;">
+          <label class="form-label" style="color:var(--accent-yellow);">🎮 遊戲房間</label>
+          <div class="room-bar" style="justify-content:flex-start;">
+            <span>房間代碼：</span><span id="host-room-code" class="room-code">--</span>
+          </div>
+          <button class="btn btn-success" style="width:100%; font-size:12px;" onclick="startGame()">▶️ 開始／重新開始遊戲</button>
+        </div>
+
         <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #555;">
           <label class="form-label" style="color:var(--accent-yellow);">👤 自訂玩家名稱（主持人可直接修改）</label>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
@@ -253,7 +293,9 @@
       </div>
 
       <!-- 搶答動態訊息 -->
+      <div id="timer" class="timer"></div>
       <div class="status-msg" id="buzzer-status">等待主持人開放搶答...</div>
+      <div id="result-banner" class="result-banner" style="display:none;"></div>
 
       <!-- 選手搶答按鈕 -->
       <div id="player-controls" style="display: none;">
@@ -289,7 +331,7 @@
         title: "請問這隻可愛的狗是什麼品種？",
         media: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800",
         bg: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200",
-        options: ["A. 柴犬", "B. 柯基", "C. 哈士奇", "D. 貴賓狗"],
+        options: ["柴犬", "柯基", "哈士奇", "貴賓狗"],
         answer: "A",
         score: 10,
         soundCorrect: "https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg",
@@ -300,7 +342,7 @@
         title: "請問短片中的風景是哪一個國家？",
         media: "https://www.w3schools.com/html/mov_bbb.mp4",
         bg: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200",
-        options: ["A. 日本", "B. 美國", "C. 瑞士", "D. 紐西蘭"],
+        options: ["日本", "美國", "瑞士", "紐西蘭"],
         answer: "C",
         score: 20,
         soundCorrect: "https://actions.google.com/sounds/v1/cheering/applause.ogg",
@@ -325,65 +367,132 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     // 第一次使用時建立預設玩家名稱；若已有名稱則保留。
-    db.ref('gameState/playerNames').once('value', snapshot => {
+    gameRef('playerNames').once('value', snapshot => {
       if (!snapshot.exists()) {
-        db.ref('gameState/playerNames').set({ p1: '玩家一', p2: '玩家二' });
+        gameRef('playerNames').set({ p1: '玩家一', p2: '玩家二' });
       }
     });
 
     let myRole = '';
-    let pendingPlayerRole = '';
+    let myPlayerId = '';
+    let myRoomCode = '';
+    let pendingJoin = false;
+    let countdownTimer = null;
+    let lastPlayedActionId = null;
 
-    function selectRole(role) {
-      if (role === 'host') {
-        enterGameAsRole('host');
-        return;
-      }
-
-      pendingPlayerRole = role;
-      const panel = document.getElementById('player-name-panel');
-      const input = document.getElementById('player-name-input');
-      panel.style.display = 'block';
-      input.value = '';
-      input.placeholder = role === 'p1' ? '例如：小明' : '例如：小華';
-      input.focus();
+    function randomCode(length = 6) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let out = '';
+      for (let i = 0; i < length; i++) out += chars[Math.floor(Math.random() * chars.length)];
+      return out;
     }
 
-    function confirmPlayerName() {
-      const input = document.getElementById('player-name-input');
-      const name = input.value.trim().slice(0, 20);
+    function getStoredPlayerId() {
+      let id = localStorage.getItem('quizPlayerId');
+      if (!id) {
+        id = 'player_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('quizPlayerId', id);
+      }
+      return id;
+    }
 
-      if (!pendingPlayerRole) return;
-      if (!name) {
-        alert('⚠️ 請先輸入玩家名稱！');
-        input.focus();
+    function createHostRoom() {
+      myRole = 'host';
+      myRoomCode = randomCode();
+      const initialState = {
+        roomCode: myRoomCode,
+        hostId: 'host_' + Date.now(),
+        gameStatus: 'waiting',
+        currentQIndex: 0,
+        p1Score: 0,
+        p2Score: 0,
+        playerNames: { p1: '玩家一', p2: '玩家二' },
+        players: {},
+        questionsList: defaultQuestions,
+        buzzerActive: false,
+        winner: null,
+        selectedOption: null,
+        blockedPlayers: {},
+        lastAction: '',
+        timerEndsAt: null
+      };
+
+      db.ref('rooms/' + myRoomCode + '/gameState').set(initialState).then(() => {
+        enterGameAsRole('host');
+      });
+    }
+
+    function joinPlayer() {
+      document.getElementById('join-panel').style.display = 'block';
+      document.getElementById('room-code-input').focus();
+    }
+
+    async function confirmPlayerJoin() {
+      const room = document.getElementById('room-code-input').value.trim().toUpperCase();
+      const name = document.getElementById('player-name-input').value.trim().slice(0, 20);
+      if (!room || !name) {
+        alert('⚠️ 請輸入房間代碼與玩家名稱！');
         return;
       }
 
-      enterGameAsRole(pendingPlayerRole, name);
-      pendingPlayerRole = '';
+      const snap = await db.ref('rooms/' + room + '/gameState').once('value');
+      if (!snap.exists()) {
+        alert('❌ 找不到這個房間，請確認代碼。');
+        return;
+      }
+
+      const state = snap.val() || {};
+      const playerId = getStoredPlayerId();
+      let role = null;
+
+      if (state.players && state.players[playerId]) {
+        role = state.players[playerId].role;
+      } else {
+        const occupied = Object.values(state.players || {}).map(p => p.role);
+        if (!occupied.includes('p1')) role = 'p1';
+        else if (!occupied.includes('p2')) role = 'p2';
+        else {
+          alert('❌ 這個房間的兩個玩家位置都已經有人使用。');
+          return;
+        }
+      }
+
+      myPlayerId = playerId;
+      myRoomCode = room;
+      myRole = role;
+
+      await db.ref('rooms/' + room + '/gameState/players/' + playerId).set({
+        role, name, joinedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+      await db.ref('rooms/' + room + '/gameState/playerNames/' + role).set(name);
+
+      enterGameAsRole(role, name);
     }
 
     function enterGameAsRole(role, playerName = '') {
       myRole = role;
       document.getElementById('role-select').style.display = 'none';
-      document.getElementById('player-name-panel').style.display = 'none';
+      document.getElementById('join-panel').style.display = 'none';
       document.getElementById('game-panel').style.display = 'block';
 
+      document.getElementById('game-room-code').innerText = myRoomCode || '--';
       if (role === 'host') {
         document.getElementById('role-display').innerText = "當前身份：👑 主持人控制台";
         document.getElementById('host-direct-panel').style.display = 'block';
         document.getElementById('host-floating').style.display = 'block';
+        document.getElementById('host-room-code').innerText = myRoomCode;
       } else {
         document.getElementById('role-display').innerText =
           `當前身份：${role === 'p1' ? '🙋‍♂️' : '🙋‍♀️'} ${playerName} (${role.toUpperCase()})`;
         document.getElementById('player-controls').style.display = 'block';
-
-        // 名稱同步到 Firebase，讓所有裝置都看到相同玩家名稱。
-        db.ref(`gameState/playerNames/${role}`).set(playerName);
       }
 
       listenToDatabase();
+    }
+
+    function gameRef(path = '') {
+      if (!myRoomCode) return null;
+      return db.ref('rooms/' + myRoomCode + '/gameState' + (path ? '/' + path : ''));
     }
 
     function updateHostDropdown(totalCount, currentIdx) {
@@ -401,7 +510,7 @@
 
     // ================= 3. 即時資料監聽與畫面同步 =================
     function listenToDatabase() {
-      db.ref('gameState').on('value', (snapshot) => {
+      gameRef().on('value', (snapshot) => {
         const data = snapshot.val() || {};
         
         if (data.questionsList && Array.isArray(data.questionsList)) {
@@ -411,6 +520,18 @@
         const playerNames = data.playerNames || {};
         const player1Name = playerNames.p1 || '玩家一';
         const player2Name = playerNames.p2 || '玩家二';
+
+        document.getElementById('game-room-code').innerText = data.roomCode || myRoomCode || '--';
+        if (myRole === 'host') document.getElementById('host-room-code').innerText = data.roomCode || myRoomCode || '--';
+
+        const players = data.players || {};
+        const p1Connected = Object.values(players).some(p => p.role === 'p1');
+        const p2Connected = Object.values(players).some(p => p.role === 'p2');
+        document.getElementById('player-list').innerHTML =
+          `<div class="player-chip ${p1Connected ? 'connected' : ''}">🟢 ${player1Name} <small>(P1 ${p1Connected ? '已加入' : '等待中'})</small></div>` +
+          `<div class="player-chip ${p2Connected ? 'connected' : ''}">🔵 ${player2Name} <small>(P2 ${p2Connected ? '已加入' : '等待中'})</small></div>`;
+
+        updateTimer(data.timerEndsAt || null, data.gameStatus);
 
         document.getElementById('name-p1').innerText = player1Name;
         document.getElementById('name-p2').innerText = player2Name;
@@ -472,119 +593,190 @@
         const selectedOpt = data.selectedOption;
         optsContainer.innerHTML = (currentQ.options || []).map((opt, idx) => {
           const optKey = String.fromCharCode(65 + idx);
+          const cleanOpt = String(opt).replace(/^[A-D][.、]\s*/i, '');
           const isSelected = selectedOpt === optKey ? 'selected' : '';
-          return `<div class="option-item ${isSelected}" onclick="clickOption('${optKey}')">${opt}</div>`;
+          const canAnswer = myRole === 'host' || data.winner === myRole;
+          const lockClass = canAnswer ? '' : 'answer-lock';
+          return `<div class="option-item ${isSelected} ${lockClass}" onclick="clickOption('${optKey}')"><strong>${optKey}.</strong> ${cleanOpt}</div>`;
         }).join('');
 
         // 音效與搶答狀態
         const buzzerBtn = document.getElementById('buzzer-btn');
         const statusBox = document.getElementById('buzzer-status');
 
-        if (data.lastAction === 'sound_correct') {
-          if (currentQ.soundCorrect) new Audio(currentQ.soundCorrect).play();
-        } else if (data.lastAction === 'sound_wrong') {
-          if (currentQ.soundWrong) new Audio(currentQ.soundWrong).play();
+        const action = data.lastAction;
+        if (action && action.id && action.id !== lastPlayedActionId) {
+          if (action.type === 'correct' && currentQ.soundCorrect) new Audio(currentQ.soundCorrect).play().catch(() => {});
+          if (action.type === 'wrong' && currentQ.soundWrong) new Audio(currentQ.soundWrong).play().catch(() => {});
+          lastPlayedActionId = action.id;
         }
 
         if (data.winner) {
-          const winnerName = data.winner === 'p1'
-            ? `${player1Name} (P1)`
-            : `${player2Name} (P2)`;
-          const chosenText = selectedOpt ? ` (已選擇選項 ${selectedOpt})` : '';
+          const winnerName = data.winner === 'p1' ? `${player1Name} (P1)` : `${player2Name} (P2)`;
+          const chosenText = selectedOpt ? `（已選擇 ${selectedOpt}）` : '';
           statusBox.innerText = `🚨 ${winnerName} 搶答成功！${chosenText}`;
           if (buzzerBtn) buzzerBtn.disabled = true;
+        } else if (data.gameStatus === 'finished') {
+          statusBox.innerText = '🏁 遊戲結束';
+          if (buzzerBtn) buzzerBtn.disabled = true;
         } else if (data.buzzerActive) {
-          statusBox.innerText = "⚡ 搶答開放中！快按搶答按鈕！";
-          if (buzzerBtn) buzzerBtn.disabled = false;
+          statusBox.innerText = "⚡ 搶答開放中！";
+          if (buzzerBtn) buzzerBtn.disabled = !!(data.blockedPlayers && data.blockedPlayers[myRole]);
         } else {
-          statusBox.innerText = "🔒 等待主持人開放搶答...";
+          statusBox.innerText = data.gameStatus === 'waiting' ? "⏳ 等待主持人開始遊戲..." : "🔒 等待主持人開放搶答...";
           if (buzzerBtn) buzzerBtn.disabled = true;
         }
       });
     }
 
     function clickOption(optKey) {
-      db.ref('gameState').once('value', (snapshot) => {
+      gameRef().once('value', (snapshot) => {
         const data = snapshot.val() || {};
         if (data.winner === myRole || myRole === 'host') {
-          db.ref('gameState/selectedOption').set(optKey);
+          gameRef('selectedOption').set(optKey);
         }
       });
     }
 
     function pressBuzzer() {
-      soundBuzzer.play();
-      db.ref('gameState').transaction((state) => {
-        if (state && state.buzzerActive && !state.winner) {
+      if (!myRole || myRole === 'host') return;
+      soundBuzzer.currentTime = 0;
+      soundBuzzer.play().catch(() => {});
+
+      gameRef().transaction((state) => {
+        if (state && state.buzzerActive && !state.winner &&
+            !(state.blockedPlayers && state.blockedPlayers[myRole])) {
           state.winner = myRole;
           state.buzzerActive = false;
+          state.gameStatus = 'answering';
+          state.timerEndsAt = null;
         }
         return state;
       });
     }
 
+    function updateTimer(endsAt, status) {
+      clearInterval(countdownTimer);
+      const timer = document.getElementById('timer');
+      if (!endsAt || status !== 'buzzer') {
+        timer.innerText = '';
+        timer.classList.remove('danger');
+        return;
+      }
+
+      const tick = () => {
+        const remain = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+        timer.innerText = remain;
+        timer.classList.toggle('danger', remain <= 3);
+
+        if (remain <= 0) {
+          clearInterval(countdownTimer);
+          if (myRole === 'host') {
+            gameRef().once('value', snap => {
+              const data = snap.val() || {};
+              if (data.buzzerActive && !data.winner) {
+                gameRef().update({
+                  buzzerActive: false,
+                  gameStatus: 'question',
+                  timerEndsAt: null
+                });
+              }
+            });
+          }
+        }
+      };
+      tick();
+      countdownTimer = setInterval(tick, 250);
+    }
+
     // ================= 4. 主持人管理邏輯 =================
     function judgeAnswer(isCorrect) {
-      db.ref('gameState').once('value', (snapshot) => {
+      if (myRole !== 'host') return;
+      gameRef().once('value', (snapshot) => {
         const data = snapshot.val() || {};
         const winner = data.winner;
         if (!winner) return;
 
         const qIndex = data.currentQIndex || 0;
         const currentQ = defaultQuestions[qIndex] || {};
-        const scoreVal = currentQ.score || 10;
-
+        const scoreVal = Number(currentQ.score) || 10;
         const delta = isCorrect ? scoreVal : -scoreVal;
-        const currentScore = data[`${winner}Score`] || 0;
+        const currentScore = Number(data[`${winner}Score`]) || 0;
 
-        db.ref('gameState').update({
+        const updates = {
           [`${winner}Score`]: currentScore + delta,
-          lastAction: isCorrect ? 'sound_correct' : 'sound_wrong',
-          buzzerActive: false,
-          winner: null,
-          selectedOption: null
-        });
+          lastAction: { type: isCorrect ? 'correct' : 'wrong', id: Date.now() },
+          selectedOption: null,
+          winner: null
+        };
 
-        setTimeout(() => db.ref('gameState/lastAction').set(''), 500);
+        if (isCorrect) {
+          updates.buzzerActive = false;
+          updates.gameStatus = 'result';
+          updates.blockedPlayers = {};
+        } else {
+          const blocked = Object.assign({}, data.blockedPlayers || {});
+          blocked[winner] = true;
+          const otherRole = winner === 'p1' ? 'p2' : 'p1';
+          const otherBlocked = !!blocked[otherRole];
+
+          updates.blockedPlayers = blocked;
+          updates.buzzerActive = !otherBlocked;
+          updates.gameStatus = otherBlocked ? 'result' : 'buzzer';
+          updates.timerEndsAt = otherBlocked ? null : Date.now() + 10000;
+        }
+
+        gameRef().update(updates).then(() => {
+          const banner = document.getElementById('result-banner');
+          banner.style.display = 'block';
+          banner.innerText = isCorrect
+            ? `⭕ ${winner === 'p1' ? (data.playerNames?.p1 || '玩家一') : (data.playerNames?.p2 || '玩家二')} 答對！ +${scoreVal} 分`
+            : `❌ 答錯！${winner === 'p1' ? (data.playerNames?.p1 || '玩家一') : (data.playerNames?.p2 || '玩家二')} 本題不能再次搶答。`;
+          setTimeout(() => banner.style.display = 'none', 2500);
+        });
       });
     }
 
     function jumpToQuestion(idx) {
-      db.ref('gameState').update({
+      gameRef().update({
         currentQIndex: parseInt(idx),
         selectedOption: null,
         buzzerActive: false,
-        winner: null
+        winner: null,
+        blockedPlayers: {},
+        gameStatus: 'question',
+        timerEndsAt: null
       });
     }
 
     function nextQuestion() {
-      db.ref('gameState').once('value', (snapshot) => {
+      gameRef().once('value', (snapshot) => {
         const currentIdx = (snapshot.val() || {}).currentQIndex || 0;
         if (currentIdx < defaultQuestions.length - 1) jumpToQuestion(currentIdx + 1);
       });
     }
 
     function prevQuestion() {
-      db.ref('gameState').once('value', (snapshot) => {
+      gameRef().once('value', (snapshot) => {
         const currentIdx = (snapshot.val() || {}).currentQIndex || 0;
         if (currentIdx > 0) jumpToQuestion(currentIdx - 1);
       });
     }
 
     function addNewQuestion() {
+      if (myRole !== 'host') return;
       const newQ = {
         title: "請輸入新題目內容",
         media: "",
         bg: "",
-        options: ["A. 選項一", "B. 選項二", "C. 選項三", "D. 選項四"],
+        options: ["選項一", "選項二", "選項三", "選項四"],
         answer: "A",
         score: 10,
         soundCorrect: "",
         soundWrong: ""
       };
       defaultQuestions.push(newQ);
-      db.ref('gameState').update({
+      gameRef().update({
         questionsList: defaultQuestions,
         currentQIndex: defaultQuestions.length - 1,
         selectedOption: null,
@@ -594,11 +786,12 @@
     }
 
     function deleteCurrentQuestion() {
+      if (myRole !== 'host') return;
       if (defaultQuestions.length <= 1) {
         alert("⚠️ 題庫至少需要保留一題！");
         return;
       }
-      db.ref('gameState').once('value', async (snapshot) => {
+      gameRef().once('value', async (snapshot) => {
         const data = snapshot.val() || {};
         let currentIdx = data.currentQIndex || 0;
         
@@ -607,7 +800,7 @@
           currentIdx = defaultQuestions.length - 1;
         }
 
-        await db.ref('gameState').update({
+        await gameRef().update({
           questionsList: defaultQuestions,
           currentQIndex: currentIdx,
           selectedOption: null,
@@ -620,7 +813,8 @@
 
     // 儲存並發布當前題目的修改 (包含背景)
     async function applyTempEdit() {
-      db.ref('gameState').once('value', async (snapshot) => {
+      if (myRole !== 'host') return;
+      gameRef().once('value', async (snapshot) => {
         const data = snapshot.val() || {};
         const qIndex = data.currentQIndex || 0;
 
@@ -659,7 +853,7 @@
         defaultQuestions[qIndex].soundCorrect = soundCorrect;
         defaultQuestions[qIndex].soundWrong = soundWrong;
 
-        db.ref('gameState').update({
+        gameRef().update({
           questionsList: defaultQuestions
         });
 
@@ -680,13 +874,48 @@
       const p1 = document.getElementById('host-name-p1').value.trim().slice(0, 20) || '玩家一';
       const p2 = document.getElementById('host-name-p2').value.trim().slice(0, 20) || '玩家二';
 
-      db.ref('gameState/playerNames').set({ p1, p2 })
+      gameRef('playerNames').set({ p1, p2 })
         .then(() => alert('✅ 玩家名稱已同步到全場！'))
         .catch(err => alert('❌ 玩家名稱儲存失敗：' + err.message));
     }
 
-    function enableBuzzer() { db.ref('gameState').update({ buzzerActive: true, winner: null, selectedOption: null }); }
-    function resetBuzzer() { db.ref('gameState').update({ buzzerActive: false, winner: null, selectedOption: null }); }
+    function startGame() {
+      if (myRole !== 'host') return;
+      gameRef().update({
+        gameStatus: 'question',
+        currentQIndex: 0,
+        p1Score: 0,
+        p2Score: 0,
+        winner: null,
+        selectedOption: null,
+        blockedPlayers: {},
+        buzzerActive: false,
+        timerEndsAt: null
+      });
+    }
+
+    function enableBuzzer() {
+      if (myRole !== 'host') return;
+      gameRef().update({
+        buzzerActive: true,
+        winner: null,
+        selectedOption: null,
+        blockedPlayers: {},
+        gameStatus: 'buzzer',
+        timerEndsAt: Date.now() + 10000
+      });
+    }
+    function resetBuzzer() {
+      if (myRole !== 'host') return;
+      gameRef().update({
+        buzzerActive: false,
+        winner: null,
+        selectedOption: null,
+        blockedPlayers: {},
+        gameStatus: 'question',
+        timerEndsAt: null
+      });
+    }
   </script>
 </body>
 </html>
