@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>多媒體預設題庫搶答系統</title>
+  <title>多媒體互動搶答系統</title>
   <style>
     :root {
-      --bg-dark: #0f1117;
+      --bg-color: #0f1117;
       --panel-bg: rgba(22, 26, 36, 0.95);
       --accent-pink: #ff6b9d;
       --accent-blue: #4a90e2;
@@ -17,44 +17,69 @@
       --border-color: rgba(255, 255, 255, 0.15);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    
     body {
       font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
-      background-color: var(--bg-dark);
+      background-color: var(--bg-color);
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
       color: var(--text-main);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 20px;
+      transition: background 0.5s ease;
     }
-    .container { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 15px; }
-    .card { background: var(--panel-bg); border-radius: 12px; padding: 20px; border: 1px solid var(--border-color); text-align: center; }
-    .title { font-size: 24px; font-weight: bold; margin-bottom: 15px; color: var(--accent-pink); }
-    .btn { background: var(--accent-blue); border: none; color: white; padding: 10px 18px; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 4px; font-weight: bold; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 15px; position: relative; }
+    .card { background: var(--panel-bg); border-radius: 16px; padding: 20px; border: 1px solid var(--border-color); text-align: center; backdrop-filter: blur(10px); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+    .title { font-size: 26px; font-weight: bold; margin-bottom: 15px; color: var(--accent-pink); }
+    
+    .btn { background: var(--accent-blue); border: none; color: white; padding: 10px 18px; border-radius: 8px; font-size: 15px; cursor: pointer; margin: 4px; font-weight: bold; transition: 0.2s; }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
     .btn-danger { background: var(--accent-red); }
     .btn-success { background: var(--accent-green); }
     .btn-warning { background: var(--accent-yellow); color: #111; }
     
-    .btn-buzzer { width: 100%; height: 140px; font-size: 36px; font-weight: bold; background: var(--accent-pink); border-radius: 20px; box-shadow: 0 8px 0 #c0392b; cursor: pointer; margin-top: 10px; color: white; border: none; }
-    .btn-buzzer:active { transform: translateY(4px); box-shadow: 0 4px 0 #c0392b; }
-    .btn-buzzer:disabled { background: #555; box-shadow: none; }
-
-    .scores { display: flex; justify-content: space-around; font-size: 22px; font-weight: bold; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; }
+    .scores { display: flex; justify-content: space-around; font-size: 22px; font-weight: bold; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); }
     .q-progress { color: var(--accent-yellow); font-size: 18px; font-weight: bold; margin-bottom: 5px; }
-    .question-text { font-size: 22px; font-weight: bold; margin: 10px 0; color: #fff; }
+    .question-text { font-size: 24px; font-weight: bold; margin: 10px 0; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
     
-    .media-box { width: 100%; min-height: 180px; background: #000; border-radius: 8px; display: flex; justify-content: center; align-items: center; margin: 10px 0; overflow: hidden; }
-    .media-box img, .media-box video { max-width: 100%; max-height: 300px; object-fit: contain; }
+    /* 影片/圖片大畫面區 (與選手一致的觀景體驗) */
+    .media-box { width: 100%; height: 380px; background: #000; border-radius: 12px; display: flex; justify-content: center; align-items: center; margin: 12px 0; overflow: hidden; border: 1px solid var(--border-color); }
+    .media-box img, .media-box video { width: 100%; height: 100%; object-fit: contain; }
 
-    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-    .option-item { background: rgba(255,255,255,0.08); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: left; font-size: 18px; font-weight: bold; }
-    
-    .status-msg { font-size: 24px; color: var(--accent-yellow); font-weight: bold; margin: 15px 0; min-height: 36px; }
-    .admin-panel { margin-top: 20px; border-top: 2px dashed var(--border-color); padding-top: 15px; text-align: center; }
+    /* 選項清單 */
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
+    .option-item { background: rgba(255,255,255,0.08); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color); text-align: left; font-size: 18px; font-weight: bold; transition: 0.2s; }
 
-    /* 輸入框與分數設定樣式 */
-    .score-input { width: 70px; padding: 6px; font-size: 16px; text-align: center; border-radius: 6px; border: 1px solid var(--accent-yellow); background: #222; color: #fff; font-weight: bold; }
+    .status-msg { font-size: 24px; color: var(--accent-yellow); font-weight: bold; margin: 10px 0; min-height: 36px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+
+    /* 搶答按鈕 */
+    .btn-buzzer { width: 100%; height: 140px; font-size: 36px; font-weight: bold; background: var(--accent-pink); border-radius: 20px; box-shadow: 0 8px 0 #c0392b; cursor: pointer; color: white; border: none; }
+    .btn-buzzer:active { transform: translateY(4px); box-shadow: 0 4px 0 #c0392b; }
+    .btn-buzzer:disabled { background: #444; box-shadow: none; color: #888; }
+
+    /* 👑 右下角主持懸浮控制面板 */
+    .host-floating-panel {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      background: rgba(15, 17, 23, 0.95);
+      border: 2px solid var(--accent-yellow);
+      border-radius: 12px;
+      padding: 15px;
+      width: 320px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
+    }
+    .host-floating-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: var(--accent-yellow); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+    .floating-body { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; text-align: left; }
+    .form-input-sm { width: 100%; padding: 6px; font-size: 13px; border-radius: 4px; border: 1px solid #555; background: #222; color: #fff; margin-bottom: 5px; user-select: text; }
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -64,7 +89,7 @@
 
   <div class="container">
     <div id="role-select" class="card">
-      <div class="title">🎮 多媒體搶答系統 - 請選擇角色</div>
+      <div class="title">🎮 多媒體互動搶答系統</div>
       <button class="btn btn-warning" onclick="selectRole('host')">👑 我是 主持人</button>
       <button class="btn" onclick="selectRole('p1')">🙋‍♂️ 我是 玩家一 (P1)</button>
       <button class="btn" onclick="selectRole('p2')">🙋‍♀️ 我是 玩家二 (P2)</button>
@@ -74,8 +99,8 @@
       <div id="role-display" style="color: #aaa; font-size: 14px; margin-bottom: 8px;"></div>
       
       <div class="scores">
-        <div>P1 分數：<span id="score-p1" style="color:var(--accent-pink)">0</span></div>
-        <div>P2 分數：<span id="score-p2" style="color:var(--accent-blue)">0</span></div>
+        <div>P1 得分：<span id="score-p1" style="color:var(--accent-pink)">0</span></div>
+        <div>P2 得分：<span id="score-p2" style="color:var(--accent-blue)">0</span></div>
       </div>
 
       <div style="margin-top: 15px;">
@@ -90,78 +115,90 @@
 
       <div class="options-grid" id="options-container"></div>
 
-      <div class="status-msg" id="buzzer-status">等待主持人開始...</div>
+      <div class="status-msg" id="buzzer-status">等待主持人開放搶答...</div>
 
       <div id="player-controls" style="display: none;">
         <button id="buzzer-btn" class="btn-buzzer" onclick="pressBuzzer()" disabled>⚡ 搶 答 ⚡</button>
       </div>
+    </div>
+  </div>
 
-      <div id="host-controls" class="admin-panel" style="display: none;">
-        <div style="font-weight: bold; color: var(--accent-yellow); margin-bottom: 10px;">🛠️ 主持人專用後台面板</div>
+  <div id="host-floating" class="host-floating-panel" style="display: none;">
+    <div class="host-floating-header">
+      <span>👑 主持人控制台</span>
+      <button onclick="toggleHostPanel()" style="background:none; border:none; color:#fff; cursor:pointer;">▼</button>
+    </div>
+    
+    <div class="floating-body" id="host-panel-content">
+      <div>
+        <button class="btn btn-warning" style="width:48%" onclick="prevQuestion()">⬅️ 上一題</button>
+        <button class="btn btn-warning" style="width:48%" onclick="nextQuestion()">下一題 ➡️</button>
+      </div>
+      <div>
+        <button class="btn btn-success" style="width:48%" onclick="enableBuzzer()">⚡ 開放搶答</button>
+        <button class="btn btn-danger" style="width:48%" onclick="resetBuzzer()">🔄 重置搶答</button>
+      </div>
+
+      <div style="border-top:1px dashed #555; padding-top:8px; margin-top:4px;">
+        <div style="font-size:12px; color:#aaa; margin-bottom:4px;">搶答判定（自動播放音效與加扣分）：</div>
+        <button class="btn btn-success" style="width:48%" onclick="judgeAnswer(true)">⭕ 答對</button>
+        <button class="btn btn-danger" style="width:48%" onclick="judgeAnswer(false)">❌ 答錯</button>
+      </div>
+
+      <div style="border-top:1px dashed #555; padding-top:8px; margin-top:4px;">
+        <button class="btn" style="width:100%; font-size:12px; background:#333;" onclick="toggleEditSection()">✏️ 現場微調本題設定 (展開/隱藏)</button>
         
-        <div style="margin-bottom: 12px;">
-          <button class="btn" onclick="prevQuestion()">⬅️ 上一題</button>
-          <button class="btn" onclick="nextQuestion()">下一題 ➡️</button>
-          <button class="btn btn-success" onclick="enableBuzzer()">⚡ 開放搶答</button>
-          <button class="btn btn-danger" onclick="resetBuzzer()">🔄 重置搶答</button>
+        <div id="edit-section" style="display:none; margin-top:8px;">
+          <label style="font-size:11px; color:var(--accent-yellow);">調整本題分數：</label>
+          <input type="number" id="edit-score" class="form-input-sm" value="10">
+          
+          <label style="font-size:11px; color:var(--accent-yellow);">臨時修改題目：</label>
+          <input type="text" id="edit-title" class="form-input-sm" placeholder="修改題目文字">
+          
+          <button class="btn btn-success" style="width:100%; font-size:12px;" onclick="applyTempEdit()">套用現場微調</button>
         </div>
+      </div>
 
-        <div style="background: rgba(245, 166, 35, 0.1); border: 1px solid var(--accent-yellow); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
-          <label style="font-weight: bold; color: var(--accent-yellow);">⚙️ 設定本題得分/扣分分值：</label>
-          <input type="number" id="input-q-score" class="score-input" value="10" min="1" max="100"> 分
-          <button class="btn btn-warning" onclick="updateCurrentQScore()" style="padding: 5px 12px; font-size: 14px;">更新配分</button>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
-          <div style="font-size: 14px; color: #ccc; margin-bottom: 5px;">搶答判定（點擊自動播放音效與依配分加減）：</div>
-          <button class="btn btn-success" onclick="judgeAnswer(true)">⭕ 判定答對</button>
-          <button class="btn btn-danger" onclick="judgeAnswer(false)">❌ 判定答錯</button>
-        </div>
-
-        <div>
-          <div style="font-size: 14px; color: #ccc; margin-bottom: 5px;">微調玩家總分：</div>
-          <button class="btn" onclick="addScore('p1', 5)">P1 +5</button>
-          <button class="btn" onclick="addScore('p1', -5)">P1 -5</button>
-          <button class="btn" onclick="addScore('p2', 5)">P2 +5</button>
-          <button class="btn" onclick="addScore('p2', -5)">P2 -5</button>
-        </div>
+      <div style="border-top:1px dashed #555; padding-top:8px; margin-top:4px;">
+        <div style="font-size:12px; color:#aaa;">手動微調總分：</div>
+        <button class="btn" style="font-size:11px;" onclick="addScore('p1', 5)">P1 +5</button>
+        <button class="btn" style="font-size:11px;" onclick="addScore('p1', -5)">P1 -5</button>
+        <button class="btn" style="font-size:11px;" onclick="addScore('p2', 5)">P2 +5</button>
+        <button class="btn" style="font-size:11px;" onclick="addScore('p2', -5)">P2 -5</button>
       </div>
     </div>
   </div>
 
   <script>
-    // 預設題庫設定 (預設每題也可獨立設定 score 數值)
-    const QUESTIONS = [
+    // ================= 1. 預設客製化題庫 (可自由增刪與修改音效/背景) =================
+    const DEFAULT_QUESTIONS = [
       {
         id: 1,
-        title: "請問圖片中的這隻動物是什麼名字？",
-        media: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=500",
+        title: "請問這隻可愛的狗是什麼品種？",
+        media: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800",
         options: ["A. 柴犬", "B. 柯基", "C. 哈士奇", "D. 貴賓狗"],
         answer: "A",
-        score: 10
+        score: 10,
+        bg: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200", // 本題背景
+        soundCorrect: "https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg",
+        soundWrong: "https://actions.google.com/sounds/v1/cartoon/boing.ogg"
       },
       {
         id: 2,
-        title: "台灣最高的高山是哪一座山？",
-        media: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500",
-        options: ["A. 雪山", "B. 玉山", "C. 阿里山", "D. 陽明山"],
-        answer: "B",
-        score: 20
-      },
-      {
-        id: 3,
-        title: "請聽短片中的音樂，這是哪一位作曲家的作品？",
+        title: "請問短片中的風景是哪一個國家？",
         media: "https://www.w3schools.com/html/mov_bbb.mp4",
-        options: ["A. 莫札特", "B. 貝多芬", "C. 蕭邦", "D. 巴哈"],
-        answer: "B",
-        score: 30
+        options: ["A. 日本", "B. 美國", "C. 瑞士", "D. 紐西蘭"],
+        answer: "C",
+        score: 20,
+        bg: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200",
+        soundCorrect: "https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg",
+        soundWrong: "https://actions.google.com/sounds/v1/cartoon/boing.ogg"
       }
     ];
 
-    const soundCorrect = new Audio("https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg");
-    const soundWrong = new Audio("https://actions.google.com/sounds/v1/cartoon/boing.ogg");
     const soundBuzzer = new Audio("https://actions.google.com/sounds/v1/emergency/beeps_high.ogg");
 
+    // ================= 2. Firebase 初始化 =================
     const firebaseConfig = {
       apiKey: "AIzaSyC3ogiRnUkzdvHLQvZABgfDtTmacyzX6nw",
       authDomain: "my-game-d36e6.firebaseapp.com",
@@ -183,8 +220,8 @@
       document.getElementById('game-panel').style.display = 'block';
 
       if (role === 'host') {
-        document.getElementById('role-display').innerText = "當前身份：👑 主持人控制台";
-        document.getElementById('host-controls').style.display = 'block';
+        document.getElementById('role-display').innerText = "當前身份：👑 主持人畫面";
+        document.getElementById('host-floating').style.display = 'block';
       } else {
         document.getElementById('role-display').innerText = `當前身份：${role === 'p1' ? '🙋‍♂️ 玩家一 (P1)' : '🙋‍♀️ 玩家二 (P2)'}`;
         document.getElementById('player-controls').style.display = 'block';
@@ -193,6 +230,7 @@
       listenToDatabase();
     }
 
+    // ================= 3. 即時同步監聽 =================
     function listenToDatabase() {
       db.ref('gameState').on('value', (snapshot) => {
         const data = snapshot.val() || {};
@@ -201,21 +239,22 @@
         document.getElementById('score-p2').innerText = data.p2Score || 0;
 
         const qIndex = data.currentQIndex || 0;
-        const currentQ = QUESTIONS[qIndex];
+        const currentQ = DEFAULT_QUESTIONS[qIndex] || DEFAULT_QUESTIONS[0];
 
-        // 讀取當前題目配分（預設為該題 score 或主持人設定的值）
-        const currentQScore = data.customQScore !== undefined ? data.customQScore : (currentQ.score || 10);
-        document.getElementById('q-score-display').innerText = currentQScore;
-        
-        // 更新主持人後台的輸入框顯示
-        const scoreInput = document.getElementById('input-q-score');
-        if (scoreInput && document.activeElement !== scoreInput) {
-          scoreInput.value = currentQScore;
+        // 讀取現場微調或預設值
+        const displayScore = data.tempScore !== undefined ? data.tempScore : currentQ.score;
+        const displayTitle = data.tempTitle || currentQ.title;
+
+        document.getElementById('q-score-display').innerText = displayScore;
+        document.getElementById('q-number').innerText = `第 ${qIndex + 1} / ${DEFAULT_QUESTIONS.length} 題`;
+        document.getElementById('q-title').innerText = displayTitle;
+
+        // 更換背景圖 (若有設定)
+        if (currentQ.bg) {
+          document.body.style.backgroundImage = `url('${currentQ.bg}')`;
         }
 
-        document.getElementById('q-number').innerText = `第 ${qIndex + 1} / ${QUESTIONS.length} 題`;
-        document.getElementById('q-title').innerText = currentQ.title;
-
+        // 高畫質多媒體渲染
         const mediaBox = document.getElementById('media-container');
         if (currentQ.media) {
           const url = currentQ.media.toLowerCase();
@@ -224,24 +263,27 @@
           } else {
             mediaBox.innerHTML = `<img src="${currentQ.media}" alt="題目圖片">`;
           }
-        } else {
-          mediaBox.innerHTML = `<span style="color: #777;">（無多媒體內容）</span>`;
         }
 
+        // 選項渲染
         const optsContainer = document.getElementById('options-container');
-        optsContainer.innerHTML = currentQ.options.map(opt => `<div class="option-item">${opt}</div>`).join('');
+        optsContainer.innerHTML = (currentQ.options || []).map(opt => `<div class="option-item">${opt}</div>`).join('');
 
+        // 搶答狀態與播放答對/答錯客製化音效
         const buzzerBtn = document.getElementById('buzzer-btn');
         const statusBox = document.getElementById('buzzer-status');
 
-        if (data.lastAction === 'sound_correct') soundCorrect.play();
-        if (data.lastAction === 'sound_wrong') soundWrong.play();
+        if (data.lastAction === 'sound_correct') {
+          new Audio(currentQ.soundCorrect).play();
+        } else if (data.lastAction === 'sound_wrong') {
+          new Audio(currentQ.soundWrong).play();
+        }
 
         if (data.winner) {
-          statusBox.innerText = `🚨 ${data.winner === 'p1' ? '玩家一 (P1)' : '玩家二 (P2)'} 搶答成功！請回答選項！`;
+          statusBox.innerText = `🚨 ${data.winner === 'p1' ? '玩家一 (P1)' : '玩家二 (P2)'} 搶答成功！請回答！`;
           if (buzzerBtn) buzzerBtn.disabled = true;
         } else if (data.buzzerActive) {
-          statusBox.innerText = "⚡ 搶答開放中！快按搶答鍵！";
+          statusBox.innerText = "⚡ 搶答開放中！快按搶答按鈕！";
           if (buzzerBtn) buzzerBtn.disabled = false;
         } else {
           statusBox.innerText = "🔒 等待主持人開放搶答...";
@@ -250,6 +292,7 @@
       });
     }
 
+    // 選手搶答
     function pressBuzzer() {
       soundBuzzer.play();
       db.ref('gameState').transaction((state) => {
@@ -261,13 +304,7 @@
       });
     }
 
-    // 更新當前題目配分
-    function updateCurrentQScore() {
-      const val = parseInt(document.getElementById('input-q-score').value) || 10;
-      db.ref('gameState').update({ customQScore: val });
-    }
-
-    // 判定答對/答錯（自動根據設定的題目配分加減分）
+    // ================= 4. 👑 主持人控制面板邏輯 =================
     function judgeAnswer(isCorrect) {
       db.ref('gameState').once('value', (snapshot) => {
         const data = snapshot.val() || {};
@@ -275,12 +312,12 @@
         if (!winner) return;
 
         const qIndex = data.currentQIndex || 0;
-        const defaultScore = QUESTIONS[qIndex] ? QUESTIONS[qIndex].score : 10;
-        const qScore = data.customQScore !== undefined ? data.customQScore : defaultScore;
+        const currentQ = DEFAULT_QUESTIONS[qIndex] || {};
+        const scoreVal = data.tempScore !== undefined ? data.tempScore : currentQ.score;
 
-        const delta = isCorrect ? qScore : -qScore;
+        const delta = isCorrect ? scoreVal : -scoreVal;
         const currentScore = data[`${winner}Score`] || 0;
-        
+
         db.ref('gameState').update({
           [`${winner}Score`]: currentScore + delta,
           lastAction: isCorrect ? 'sound_correct' : 'sound_wrong',
@@ -295,10 +332,11 @@
     function nextQuestion() {
       db.ref('gameState').once('value', (snapshot) => {
         const currentIdx = (snapshot.val() || {}).currentQIndex || 0;
-        if (currentIdx < QUESTIONS.length - 1) {
+        if (currentIdx < DEFAULT_QUESTIONS.length - 1) {
           db.ref('gameState').update({
             currentQIndex: currentIdx + 1,
-            customQScore: QUESTIONS[currentIdx + 1].score || 10,
+            tempScore: null,
+            tempTitle: null,
             buzzerActive: false,
             winner: null
           });
@@ -312,7 +350,8 @@
         if (currentIdx > 0) {
           db.ref('gameState').update({
             currentQIndex: currentIdx - 1,
-            customQScore: QUESTIONS[currentIdx - 1].score || 10,
+            tempScore: null,
+            tempTitle: null,
             buzzerActive: false,
             winner: null
           });
@@ -320,16 +359,28 @@
       });
     }
 
-    function enableBuzzer() {
-      db.ref('gameState').update({ buzzerActive: true, winner: null });
+    function applyTempEdit() {
+      const newScore = parseInt(document.getElementById('edit-score').value);
+      const newTitle = document.getElementById('edit-title').value;
+      const updates = {};
+      if (!isNaN(newScore)) updates.tempScore = newScore;
+      if (newTitle) updates.tempTitle = newTitle;
+      
+      db.ref('gameState').update(updates);
+      alert("現場微調已成功發布！");
     }
 
-    function resetBuzzer() {
-      db.ref('gameState').update({ buzzerActive: false, winner: null });
+    function enableBuzzer() { db.ref('gameState').update({ buzzerActive: true, winner: null }); }
+    function resetBuzzer() { db.ref('gameState').update({ buzzerActive: false, winner: null }); }
+    function addScore(player, amount) { db.ref(`gameState/${player}Score`).transaction((score) => (score || 0) + amount); }
+    
+    function toggleHostPanel() {
+      const content = document.getElementById('host-panel-content');
+      content.style.display = content.style.display === 'none' ? 'flex' : 'none';
     }
-
-    function addScore(player, amount) {
-      db.ref(`gameState/${player}Score`).transaction((score) => (score || 0) + amount);
+    function toggleEditSection() {
+      const sec = document.getElementById('edit-section');
+      sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
     }
   </script>
 </body>
