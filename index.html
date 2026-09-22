@@ -33,7 +33,7 @@
       transition: background 0.5s ease;
     }
 
-    .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 15px; position: relative; }
+    .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 15px; position: relative; padding-bottom: 80px; }
     .card { background: var(--panel-bg); border-radius: 16px; padding: 20px; border: 1px solid var(--border-color); text-align: center; backdrop-filter: blur(10px); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
     .title { font-size: 26px; font-weight: bold; margin-bottom: 15px; color: var(--accent-pink); }
     
@@ -75,7 +75,21 @@
     .btn-buzzer:active { transform: translateY(4px); box-shadow: 0 4px 0 #c0392b; }
     .btn-buzzer:disabled { background: #444; box-shadow: none; color: #888; }
 
-    /* 👑 右下角主持懸浮控制面板 */
+    /* 👑 主持人專屬：直接顯示在畫面上的即時修改面板 (選手看不到) */
+    .host-direct-panel {
+      background: rgba(245, 166, 35, 0.1);
+      border: 2px dashed var(--accent-yellow);
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 15px;
+      text-align: left;
+      display: none;
+    }
+    .host-direct-title { font-size: 16px; font-weight: bold; color: var(--accent-yellow); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .form-input-sm { width: 100%; padding: 6px; font-size: 12px; border-radius: 4px; border: 1px solid #555; background: #222; color: #fff; margin-bottom: 6px; user-select: text; }
+    .form-label { font-size: 11px; color: #ccc; display: block; margin-top: 4px; }
+
+    /* 👑 右下角主持控制面板 (只放搶答、評分與換題快捷) */
     .host-floating-panel {
       position: fixed;
       bottom: 20px;
@@ -84,14 +98,13 @@
       background: rgba(15, 17, 23, 0.95);
       border: 2px solid var(--accent-yellow);
       border-radius: 12px;
-      padding: 15px;
-      width: 340px;
+      padding: 12px;
+      width: 280px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.8);
       backdrop-filter: blur(10px);
+      display: none;
     }
-    .host-floating-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: var(--accent-yellow); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
-    .floating-body { display: flex; flex-direction: column; gap: 8px; max-height: 480px; overflow-y: auto; text-align: left; }
-    .form-input-sm { width: 100%; padding: 6px; font-size: 13px; border-radius: 4px; border: 1px solid #555; background: #222; color: #fff; margin-bottom: 5px; user-select: text; }
+    .host-floating-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: var(--accent-yellow); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; font-size: 13px; }
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -100,6 +113,7 @@
 <body>
 
   <div class="container">
+    <!-- 1. 角色選擇頁面 -->
     <div id="role-select" class="card">
       <div class="title">🎮 多媒體互動搶答系統</div>
       <button class="btn btn-warning" onclick="selectRole('host')">👑 我是 主持人</button>
@@ -107,14 +121,17 @@
       <button class="btn" onclick="selectRole('p2')">🙋‍♀️ 我是 玩家二 (P2)</button>
     </div>
 
+    <!-- 2. 主遊戲畫面 (主持人與選手共同看見的大螢幕) -->
     <div id="game-panel" class="card" style="display: none;">
       <div id="role-display" style="color: #aaa; font-size: 14px; margin-bottom: 8px;"></div>
       
+      <!-- 分數統計區 -->
       <div class="scores">
         <div>P1 得分：<span id="score-p1" style="color:var(--accent-pink)">0</span></div>
         <div>P2 得分：<span id="score-p2" style="color:var(--accent-blue)">0</span></div>
       </div>
 
+      <!-- 題目與價值 -->
       <div style="margin-top: 15px;">
         <div class="q-progress">
           <span id="q-number">題目載入中...</span>
@@ -123,85 +140,87 @@
         <div class="question-text" id="q-title">--</div>
       </div>
 
+      <!-- 高畫質多媒體區域 -->
       <div class="media-box" id="media-container"></div>
 
+      <!-- 選項清單區 -->
       <div class="options-grid" id="options-container"></div>
 
+      <!-- 👑 【主持人專屬】直接顯示在畫面上的即時修改面板 (選手看不到) -->
+      <div id="host-direct-panel" class="host-direct-panel">
+        <div class="host-direct-title">🛠️ 主持人即時修改區 (此區選手看不見)</div>
+        
+        <label class="form-label">修改題目文字：</label>
+        <input type="text" id="edit-title" class="form-input-sm">
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div>
+            <label class="form-label">上傳新照片/影片檔案：</label>
+            <input type="file" id="edit-media-file" class="form-input-sm" accept="image/*,video/*">
+          </div>
+          <div>
+            <label class="form-label">或貼上媒體網址：</label>
+            <input type="text" id="edit-media-url" class="form-input-sm" placeholder="https://...">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div>
+            <label class="form-label">答對音效 (檔案或網址)：</label>
+            <input type="file" id="edit-correct-file" class="form-input-sm" accept="audio/*">
+            <input type="text" id="edit-sound-correct" class="form-input-sm" placeholder="音效網址">
+          </div>
+          <div>
+            <label class="form-label">答錯音效 (檔案或網址)：</label>
+            <input type="file" id="edit-wrong-file" class="form-input-sm" accept="audio/*">
+            <input type="text" id="edit-sound-wrong" class="form-input-sm" placeholder="音效網址">
+          </div>
+        </div>
+
+        <label class="form-label">本題配分：</label>
+        <input type="number" id="edit-score" class="form-input-sm" style="width: 120px;">
+
+        <button class="btn btn-success" style="width:100%; margin-top:8px; font-size:13px;" onclick="applyTempEdit()">🚀 即時發布更新到全場畫面</button>
+      </div>
+
+      <!-- 搶答動態訊息 -->
       <div class="status-msg" id="buzzer-status">等待主持人開放搶答...</div>
 
+      <!-- 選手搶答按鈕 -->
       <div id="player-controls" style="display: none;">
         <button id="buzzer-btn" class="btn-buzzer" onclick="pressBuzzer()" disabled>⚡ 搶 答 ⚡</button>
       </div>
     </div>
   </div>
 
-  <div id="host-floating" class="host-floating-panel" style="display: none;">
+  <!-- 3. 👑 右下角主持快捷控制台 (僅限搶答開關與判定) -->
+  <div id="host-floating" class="host-floating-panel">
     <div class="host-floating-header">
-      <span>👑 主持人控制台</span>
-      <button onclick="toggleHostPanel()" style="background:none; border:none; color:#fff; cursor:pointer;">▼</button>
+      <span>⚡ 搶答與判定快捷列</span>
     </div>
     
-    <div class="floating-body" id="host-panel-content">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
       <div>
-        <label style="font-size: 12px; color: var(--accent-yellow);">🎯 快速切換題庫：</label>
-        <select id="q-select-dropdown" class="form-input-sm" onchange="jumpToQuestion(this.value)"></select>
+        <label style="font-size: 11px; color: var(--accent-yellow);">快速換題：</label>
+        <select id="q-select-dropdown" class="form-input-sm" onchange="jumpToQuestion(this.value)" style="margin-bottom:4px;"></select>
       </div>
-
-      <div>
-        <button class="btn btn-warning" style="width:48%" onclick="prevQuestion()">⬅️ 上一題</button>
-        <button class="btn btn-warning" style="width:48%" onclick="nextQuestion()">下一題 ➡️</button>
+      <div style="display: flex; gap: 4px;">
+        <button class="btn btn-warning" style="flex:1; padding:6px; font-size:12px;" onclick="prevQuestion()">⬅️ 上題</button>
+        <button class="btn btn-warning" style="flex:1; padding:6px; font-size:12px;" onclick="nextQuestion()">下題 ➡️</button>
       </div>
-      <div>
-        <button class="btn btn-success" style="width:48%" onclick="enableBuzzer()">⚡ 開放搶答</button>
-        <button class="btn btn-danger" style="width:48%" onclick="resetBuzzer()">🔄 重置搶答</button>
+      <div style="display: flex; gap: 4px;">
+        <button class="btn btn-success" style="flex:1; padding:6px; font-size:12px;" onclick="enableBuzzer()">⚡ 開放</button>
+        <button class="btn btn-danger" style="flex:1; padding:6px; font-size:12px;" onclick="resetBuzzer()">🔄 重置</button>
       </div>
-
-      <div style="border-top:1px dashed #555; padding-top:8px; margin-top:4px;">
-        <div style="font-size:12px; color:#aaa; margin-bottom:4px;">搶答判定（播放該題客製化音效與算分）：</div>
-        <button class="btn btn-success" style="width:48%" onclick="judgeAnswer(true)">⭕ 判定答對</button>
-        <button class="btn btn-danger" style="width:48%" onclick="judgeAnswer(false)">❌ 判定答錯</button>
-      </div>
-
-      <div style="border-top:1px dashed #555; padding-top:8px; margin-top:4px;">
-        <button class="btn" style="width:100%; font-size:12px; background:#333;" onclick="toggleEditSection()">✏️ 自訂/微調當前題目 (展開)</button>
-        
-        <div id="edit-section" style="display:none; margin-top:8px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px;">
-          <label style="font-size:11px; color:var(--accent-yellow);">題目文字：</label>
-          <input type="text" id="edit-title" class="form-input-sm">
-          
-          <label style="font-size:11px; color:var(--accent-yellow);">正確答案：</label>
-          <select id="edit-answer" class="form-input-sm">
-            <option value="A">A</option>
-            <option value="B">B</option>
-            <option value="C">C</option>
-            <option value="D">D</option>
-          </select>
-
-          <label style="font-size:11px; color:var(--accent-yellow);">本題分數：</label>
-          <input type="number" id="edit-score" class="form-input-sm">
-
-          <label style="font-size:11px; color:var(--accent-yellow);">答對音效網址 (可自訂)：</label>
-          <input type="text" id="edit-sound-correct" class="form-input-sm" placeholder="https://...">
-
-          <label style="font-size:11px; color:var(--accent-yellow);">答錯音效網址 (可自訂)：</label>
-          <input type="text" id="edit-sound-wrong" class="form-input-sm" placeholder="https://...">
-
-          <button class="btn btn-success" style="width:100%; font-size:12px;" onclick="applyTempEdit()">💾 儲存並更新此題</button>
-        </div>
-      </div>
-
-      <div style="border-top:1px dashed #555; padding-top:8px; margin-top:4px;">
-        <div style="font-size:12px; color:#aaa;">手動微調玩家分數：</div>
-        <button class="btn" style="font-size:11px;" onclick="addScore('p1', 5)">P1 +5</button>
-        <button class="btn" style="font-size:11px;" onclick="addScore('p1', -5)">P1 -5</button>
-        <button class="btn" style="font-size:11px;" onclick="addScore('p2', 5)">P2 +5</button>
-        <button class="btn" style="font-size:11px;" onclick="addScore('p2', -5)">P2 -5</button>
+      <div style="border-top:1px dashed #555; padding-top:4px; display: flex; gap: 4px;">
+        <button class="btn btn-success" style="flex:1; padding:6px; font-size:12px;" onclick="judgeAnswer(true)">⭕ 答對</button>
+        <button class="btn btn-danger" style="flex:1; padding:6px; font-size:12px;" onclick="judgeAnswer(false)">❌ 答錯</button>
       </div>
     </div>
   </div>
 
   <script>
-    // ================= 1. 預設題庫 (每題皆可獨立設定答對/答錯音效) =================
+    // ================= 1. 預設題庫 =================
     const DEFAULT_QUESTIONS = [
       {
         id: 1,
@@ -211,8 +230,8 @@
         answer: "A",
         score: 10,
         bg: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200",
-        soundCorrect: "https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg", // 獨立答對音效
-        soundWrong: "https://actions.google.com/sounds/v1/cartoon/boing.ogg"        // 獨立答錯音效
+        soundCorrect: "https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg",
+        soundWrong: "https://actions.google.com/sounds/v1/cartoon/boing.ogg"
       },
       {
         id: 2,
@@ -222,8 +241,8 @@
         answer: "C",
         score: 20,
         bg: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200",
-        soundCorrect: "https://actions.google.com/sounds/v1/cheering/applause.ogg",  // 鼓掌答對音效
-        soundWrong: "https://actions.google.com/sounds/v1/fights/hit_01.ogg"        // 打擊答錯音效
+        soundCorrect: "https://actions.google.com/sounds/v1/cheering/applause.ogg",
+        soundWrong: "https://actions.google.com/sounds/v1/fights/hit_01.ogg"
       }
     ];
 
@@ -252,7 +271,8 @@
 
       if (role === 'host') {
         document.getElementById('role-display').innerText = "當前身份：👑 主持人控制台";
-        document.getElementById('host-floating').style.display = 'block';
+        document.getElementById('host-direct-panel').style.display = 'block'; // 顯示畫面上直覺修改區
+        document.getElementById('host-floating').style.display = 'block'; // 顯示右下角快捷面板
         initHostDropdown();
       } else {
         document.getElementById('role-display').innerText = `當前身份：${role === 'p1' ? '🙋‍♂️ 玩家一 (P1)' : '🙋‍♀️ 玩家二 (P2)'}`;
@@ -262,13 +282,12 @@
       listenToDatabase();
     }
 
-    // 初始化主持人下拉選單
     function initHostDropdown() {
       const dropdown = document.getElementById('q-select-dropdown');
-      dropdown.innerHTML = DEFAULT_QUESTIONS.map((q, idx) => `<option value="${idx}">第 ${idx+1} 題：${q.title.substring(0, 12)}...</option>`).join('');
+      dropdown.innerHTML = DEFAULT_QUESTIONS.map((q, idx) => `<option value="${idx}">第 ${idx+1} 題：${q.title.substring(0, 10)}...</option>`).join('');
     }
 
-    // ================= 3. 即時資料監聽與畫面更新 =================
+    // ================= 3. 即時資料監聽與畫面同步 =================
     function listenToDatabase() {
       db.ref('gameState').on('value', (snapshot) => {
         const data = snapshot.val() || {};
@@ -279,42 +298,51 @@
         const qIndex = data.currentQIndex || 0;
         const currentQ = DEFAULT_QUESTIONS[qIndex] || DEFAULT_QUESTIONS[0];
 
-        // 讀取自訂或預設值
         const displayScore = data.tempScore !== undefined ? data.tempScore : currentQ.score;
         const displayTitle = data.tempTitle || currentQ.title;
+        const displayMedia = data.tempMedia || currentQ.media;
 
         document.getElementById('q-score-display').innerText = displayScore;
         document.getElementById('q-number').innerText = `第 ${qIndex + 1} / ${DEFAULT_QUESTIONS.length} 題`;
         document.getElementById('q-title').innerText = displayTitle;
 
-        // 同步主持人下拉選單位置
         const dropdown = document.getElementById('q-select-dropdown');
         if (dropdown) dropdown.value = qIndex;
 
-        // 背景
-        if (currentQ.bg) document.body.style.backgroundImage = `url('${currentQ.bg}')`;
-
-        // 多媒體渲染
-        const mediaBox = document.getElementById('media-container');
-        if (currentQ.media) {
-          const url = currentQ.media.toLowerCase();
-          if (url.endsWith('.mp4') || url.endsWith('.webm') || url.includes('video')) {
-            mediaBox.innerHTML = `<video src="${currentQ.media}" controls autoplay loop muted></video>`;
-          } else {
-            mediaBox.innerHTML = `<img src="${currentQ.media}" alt="題目圖片">`;
-          }
+        // 如果是主持人，自動把當前題目的數值填入主畫面的即時修改表單中
+        if (myRole === 'host') {
+          document.getElementById('edit-title').value = displayTitle;
+          document.getElementById('edit-score').value = displayScore;
+          document.getElementById('edit-media-url').value = data.tempMedia || currentQ.media || '';
+          document.getElementById('edit-sound-correct').value = data.tempSoundCorrect || currentQ.soundCorrect || '';
+          document.getElementById('edit-sound-wrong').value = data.tempSoundWrong || currentQ.soundWrong || '';
         }
 
-        // 🎯 選項渲染 (點擊選取機制)
+        if (currentQ.bg) document.body.style.backgroundImage = `url('${currentQ.bg}')`;
+
+        // 渲染多媒體
+        const mediaBox = document.getElementById('media-container');
+        if (displayMedia) {
+          const url = displayMedia.toLowerCase();
+          if (url.startsWith('data:video') || url.endsWith('.mp4') || url.endsWith('.webm') || url.includes('video')) {
+            mediaBox.innerHTML = `<video src="${displayMedia}" controls autoplay loop muted></video>`;
+          } else {
+            mediaBox.innerHTML = `<img src="${displayMedia}" alt="題目媒體">`;
+          }
+        } else {
+          mediaBox.innerHTML = `<div style="color:#666;">無多媒體檔案</div>`;
+        }
+
+        // 渲染選項
         const optsContainer = document.getElementById('options-container');
         const selectedOpt = data.selectedOption;
         optsContainer.innerHTML = (currentQ.options || []).map((opt, idx) => {
-          const optKey = String.fromCharCode(65 + idx); // A, B, C, D
+          const optKey = String.fromCharCode(65 + idx);
           const isSelected = selectedOpt === optKey ? 'selected' : '';
           return `<div class="option-item ${isSelected}" onclick="clickOption('${optKey}')">${opt}</div>`;
         }).join('');
 
-        // 搶答與客製化音效觸發
+        // 音效與搶答狀態
         const buzzerBtn = document.getElementById('buzzer-btn');
         const statusBox = document.getElementById('buzzer-status');
 
@@ -341,18 +369,15 @@
       });
     }
 
-    // 🎯 玩家或主持人點擊選項
     function clickOption(optKey) {
       db.ref('gameState').once('value', (snapshot) => {
         const data = snapshot.val() || {};
-        // 只有搶到答題權的人或主持人可以點擊選項
         if (data.winner === myRole || myRole === 'host') {
           db.ref('gameState/selectedOption').set(optKey);
         }
       });
     }
 
-    // 搶答
     function pressBuzzer() {
       soundBuzzer.play();
       db.ref('gameState').transaction((state) => {
@@ -364,7 +389,7 @@
       });
     }
 
-    // ================= 4. 👑 主持人操作邏輯 =================
+    // ================= 4. 主持人控制邏輯 =================
     function judgeAnswer(isCorrect) {
       db.ref('gameState').once('value', (snapshot) => {
         const data = snapshot.val() || {};
@@ -390,12 +415,12 @@
       });
     }
 
-    // 切換指定題目
     function jumpToQuestion(idx) {
       db.ref('gameState').update({
         currentQIndex: parseInt(idx),
         tempScore: null,
         tempTitle: null,
+        tempMedia: null,
         tempSoundCorrect: null,
         tempSoundWrong: null,
         selectedOption: null,
@@ -407,61 +432,65 @@
     function nextQuestion() {
       db.ref('gameState').once('value', (snapshot) => {
         const currentIdx = (snapshot.val() || {}).currentQIndex || 0;
-        if (currentIdx < DEFAULT_QUESTIONS.length - 1) {
-          jumpToQuestion(currentIdx + 1);
-        }
+        if (currentIdx < DEFAULT_QUESTIONS.length - 1) jumpToQuestion(currentIdx + 1);
       });
     }
 
     function prevQuestion() {
       db.ref('gameState').once('value', (snapshot) => {
         const currentIdx = (snapshot.val() || {}).currentQIndex || 0;
-        if (currentIdx > 0) {
-          jumpToQuestion(currentIdx - 1);
-        }
+        if (currentIdx > 0) jumpToQuestion(currentIdx - 1);
       });
     }
 
-    // 保存現場自訂微調
-    function applyTempEdit() {
+    // 發布主畫面上的即時修改
+    async function applyTempEdit() {
+      const updates = {};
       const newTitle = document.getElementById('edit-title').value;
       const newScore = parseInt(document.getElementById('edit-score').value);
-      const newSoundC = document.getElementById('edit-sound-correct').value;
-      const newSoundW = document.getElementById('edit-sound-wrong').value;
 
-      const updates = {};
       if (newTitle) updates.tempTitle = newTitle;
       if (!isNaN(newScore)) updates.tempScore = newScore;
-      if (newSoundC) updates.tempSoundCorrect = newSoundC;
-      if (newSoundW) updates.tempSoundWrong = newSoundW;
+
+      const mediaFile = document.getElementById('edit-media-file').files[0];
+      const mediaUrl = document.getElementById('edit-media-url').value;
+      if (mediaFile) {
+        updates.tempMedia = await fileToDataURL(mediaFile);
+      } else if (mediaUrl) {
+        updates.tempMedia = mediaUrl;
+      }
+
+      const correctFile = document.getElementById('edit-correct-file').files[0];
+      const correctUrl = document.getElementById('edit-sound-correct').value;
+      if (correctFile) {
+        updates.tempSoundCorrect = await fileToDataURL(correctFile);
+      } else if (correctUrl) {
+        updates.tempSoundCorrect = correctUrl;
+      }
+
+      const wrongFile = document.getElementById('edit-wrong-file').files[0];
+      const wrongUrl = document.getElementById('edit-sound-wrong').value;
+      if (wrongFile) {
+        updates.tempSoundWrong = await fileToDataURL(wrongFile);
+      } else if (wrongUrl) {
+        updates.tempSoundWrong = wrongUrl;
+      }
 
       db.ref('gameState').update(updates);
-      alert("✅ 當前題目設定已儲存並同步！");
+      alert("✅ 已即時更新全場畫面設定！");
+    }
+
+    function fileToDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
     }
 
     function enableBuzzer() { db.ref('gameState').update({ buzzerActive: true, winner: null, selectedOption: null }); }
     function resetBuzzer() { db.ref('gameState').update({ buzzerActive: false, winner: null, selectedOption: null }); }
-    function addScore(player, amount) { db.ref(`gameState/${player}Score`).transaction((score) => (score || 0) + amount); }
-
-    function toggleHostPanel() {
-      const content = document.getElementById('host-panel-content');
-      content.style.display = content.style.display === 'none' ? 'flex' : 'none';
-    }
-    function toggleEditSection() {
-      const sec = document.getElementById('edit-section');
-      sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
-      
-      // 預載當前數值到編輯框中
-      db.ref('gameState').once('value', (snapshot) => {
-        const data = snapshot.val() || {};
-        const qIndex = data.currentQIndex || 0;
-        const currentQ = DEFAULT_QUESTIONS[qIndex];
-        document.getElementById('edit-title').value = data.tempTitle || currentQ.title;
-        document.getElementById('edit-score').value = data.tempScore !== undefined ? data.tempScore : currentQ.score;
-        document.getElementById('edit-sound-correct').value = data.tempSoundCorrect || currentQ.soundCorrect || '';
-        document.getElementById('edit-sound-wrong').value = data.tempSoundWrong || currentQ.soundWrong || '';
-      });
-    }
   </script>
 </body>
 </html>
