@@ -117,8 +117,16 @@
     <div id="role-select" class="card">
       <div class="title">🎮 多媒體互動搶答系統</div>
       <button class="btn btn-warning" onclick="selectRole('host')">👑 我是 主持人</button>
-      <button class="btn" onclick="selectRole('p1')">🙋‍♂️ 我是 玩家一 (P1)</button>
-      <button class="btn" onclick="selectRole('p2')">🙋‍♀️ 我是 玩家二 (P2)</button>
+      <button class="btn" onclick="selectRole('p1')">🙋‍♂️ 我是 玩家一</button>
+      <button class="btn" onclick="selectRole('p2')">🙋‍♀️ 我是 玩家二</button>
+
+      <div id="player-name-panel" style="display:none; margin-top:15px; padding:15px; background:rgba(255,255,255,0.06); border:1px solid var(--border-color); border-radius:10px;">
+        <div style="font-weight:bold; margin-bottom:8px;">✏️ 設定你的玩家名稱</div>
+        <input id="player-name-input" type="text" maxlength="20"
+               placeholder="例如：小明"
+               style="width:100%; padding:10px; border-radius:8px; border:1px solid #555; background:#222; color:#fff; font-size:16px; user-select:text;">
+        <button class="btn btn-success" style="width:100%; margin-top:8px;" onclick="confirmPlayerName()">✅ 確認名稱並進入</button>
+      </div>
     </div>
 
     <!-- 2. 主遊戲畫面 -->
@@ -127,8 +135,8 @@
       
       <!-- 分數統計區 -->
       <div class="scores">
-        <div>P1 得分：<span id="score-p1" style="color:var(--accent-pink)">0</span></div>
-        <div>P2 得分：<span id="score-p2" style="color:var(--accent-blue)">0</span></div>
+        <div><span id="name-p1">玩家一</span>：<span id="score-p1" style="color:var(--accent-pink)">0</span></div>
+        <div><span id="name-p2">玩家二</span>：<span id="score-p2" style="color:var(--accent-blue)">0</span></div>
       </div>
 
       <!-- 題目與價值 -->
@@ -233,6 +241,15 @@
         </div>
 
         <button class="btn btn-success" style="width:100%; margin-top:8px; font-size:13px;" onclick="applyTempEdit()">🚀 即時儲存並同步更新全場 (含背景)</button>
+
+        <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #555;">
+          <label class="form-label" style="color:var(--accent-yellow);">👤 自訂玩家名稱（主持人可直接修改）</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <input type="text" id="host-name-p1" class="form-input-sm" maxlength="20" placeholder="玩家一名稱">
+            <input type="text" id="host-name-p2" class="form-input-sm" maxlength="20" placeholder="玩家二名稱">
+          </div>
+          <button class="btn btn-warning" style="width:100%; margin-top:4px; font-size:12px;" onclick="savePlayerNames()">💾 儲存玩家名稱</button>
+        </div>
       </div>
 
       <!-- 搶答動態訊息 -->
@@ -307,11 +324,50 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    // 第一次使用時建立預設玩家名稱；若已有名稱則保留。
+    db.ref('gameState/playerNames').once('value', snapshot => {
+      if (!snapshot.exists()) {
+        db.ref('gameState/playerNames').set({ p1: '玩家一', p2: '玩家二' });
+      }
+    });
+
     let myRole = '';
+    let pendingPlayerRole = '';
 
     function selectRole(role) {
+      if (role === 'host') {
+        enterGameAsRole('host');
+        return;
+      }
+
+      pendingPlayerRole = role;
+      const panel = document.getElementById('player-name-panel');
+      const input = document.getElementById('player-name-input');
+      panel.style.display = 'block';
+      input.value = '';
+      input.placeholder = role === 'p1' ? '例如：小明' : '例如：小華';
+      input.focus();
+    }
+
+    function confirmPlayerName() {
+      const input = document.getElementById('player-name-input');
+      const name = input.value.trim().slice(0, 20);
+
+      if (!pendingPlayerRole) return;
+      if (!name) {
+        alert('⚠️ 請先輸入玩家名稱！');
+        input.focus();
+        return;
+      }
+
+      enterGameAsRole(pendingPlayerRole, name);
+      pendingPlayerRole = '';
+    }
+
+    function enterGameAsRole(role, playerName = '') {
       myRole = role;
       document.getElementById('role-select').style.display = 'none';
+      document.getElementById('player-name-panel').style.display = 'none';
       document.getElementById('game-panel').style.display = 'block';
 
       if (role === 'host') {
@@ -319,8 +375,12 @@
         document.getElementById('host-direct-panel').style.display = 'block';
         document.getElementById('host-floating').style.display = 'block';
       } else {
-        document.getElementById('role-display').innerText = `當前身份：${role === 'p1' ? '🙋‍♂️ 玩家一 (P1)' : '🙋‍♀️ 玩家二 (P2)'}`;
+        document.getElementById('role-display').innerText =
+          `當前身份：${role === 'p1' ? '🙋‍♂️' : '🙋‍♀️'} ${playerName} (${role.toUpperCase()})`;
         document.getElementById('player-controls').style.display = 'block';
+
+        // 名稱同步到 Firebase，讓所有裝置都看到相同玩家名稱。
+        db.ref(`gameState/playerNames/${role}`).set(playerName);
       }
 
       listenToDatabase();
@@ -348,6 +408,12 @@
           defaultQuestions = data.questionsList;
         }
 
+        const playerNames = data.playerNames || {};
+        const player1Name = playerNames.p1 || '玩家一';
+        const player2Name = playerNames.p2 || '玩家二';
+
+        document.getElementById('name-p1').innerText = player1Name;
+        document.getElementById('name-p2').innerText = player2Name;
         document.getElementById('score-p1').innerText = data.p1Score || 0;
         document.getElementById('score-p2').innerText = data.p2Score || 0;
 
@@ -371,6 +437,9 @@
 
         // 如果是主持人，自動把當前題目帶入修改表單
         if (myRole === 'host') {
+          document.getElementById('host-name-p1').value = player1Name;
+          document.getElementById('host-name-p2').value = player2Name;
+
           document.getElementById('edit-title').value = currentQ.title || '';
           document.getElementById('edit-score').value = currentQ.score || 10;
           document.getElementById('edit-media-url').value = currentQ.media || '';
@@ -418,7 +487,9 @@
         }
 
         if (data.winner) {
-          const winnerName = data.winner === 'p1' ? '玩家一 (P1)' : '玩家二 (P2)';
+          const winnerName = data.winner === 'p1'
+            ? `${player1Name} (P1)`
+            : `${player2Name} (P2)`;
           const chosenText = selectedOpt ? ` (已選擇選項 ${selectedOpt})` : '';
           statusBox.innerText = `🚨 ${winnerName} 搶答成功！${chosenText}`;
           if (buzzerBtn) buzzerBtn.disabled = true;
@@ -603,6 +674,15 @@
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
+    }
+
+    function savePlayerNames() {
+      const p1 = document.getElementById('host-name-p1').value.trim().slice(0, 20) || '玩家一';
+      const p2 = document.getElementById('host-name-p2').value.trim().slice(0, 20) || '玩家二';
+
+      db.ref('gameState/playerNames').set({ p1, p2 })
+        .then(() => alert('✅ 玩家名稱已同步到全場！'))
+        .catch(err => alert('❌ 玩家名稱儲存失敗：' + err.message));
     }
 
     function enableBuzzer() { db.ref('gameState').update({ buzzerActive: true, winner: null, selectedOption: null }); }
