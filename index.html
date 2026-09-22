@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>多媒體搶答系統（完整同步版）</title>
+  <title>多媒體預設題庫搶答系統</title>
   <style>
     :root {
       --bg-dark: #0f1117;
-      --panel-bg: rgba(22, 26, 36, 0.92);
+      --panel-bg: rgba(22, 26, 36, 0.95);
       --accent-pink: #ff6b9d;
       --accent-blue: #4a90e2;
       --accent-yellow: #f5a623;
       --accent-green: #2ecc71;
+      --accent-red: #e74c3c;
       --text-main: #ffffff;
       --border-color: rgba(255, 255, 255, 0.15);
     }
@@ -26,51 +27,34 @@
       align-items: center;
       padding: 20px;
     }
-    .container { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 20px; }
+    .container { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 15px; }
     .card { background: var(--panel-bg); border-radius: 12px; padding: 20px; border: 1px solid var(--border-color); text-align: center; }
     .title { font-size: 24px; font-weight: bold; margin-bottom: 15px; color: var(--accent-pink); }
-    .btn { background: var(--accent-blue); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 5px; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-danger { background: #e74c3c; }
+    .btn { background: var(--accent-blue); border: none; color: white; padding: 10px 18px; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 4px; font-weight: bold; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-danger { background: var(--accent-red); }
     .btn-success { background: var(--accent-green); }
-    .btn-buzzer { width: 100%; height: 160px; font-size: 36px; font-weight: bold; background: var(--accent-pink); border-radius: 20px; box-shadow: 0 10px 0 #c0392b; cursor: pointer; margin-top: 10px; }
-    .btn-buzzer:active { transform: translateY(4px); box-shadow: 0 6px 0 #c0392b; }
-    .scores { display: flex; justify-content: space-around; font-size: 20px; font-weight: bold; margin-bottom: 15px; }
-    .winner-box { font-size: 26px; color: var(--accent-yellow); font-weight: bold; margin: 15px 0; min-height: 40px; }
+    .btn-warning { background: var(--accent-yellow); color: #111; }
     
-    /* 多媒體播放區樣式 */
-    .media-box {
-      width: 100%;
-      min-height: 250px;
-      max-height: 400px;
-      background: #000;
-      border-radius: 8px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 15px 0;
-      overflow: hidden;
-    }
-    .media-box img, .media-box video {
-      max-width: 100%;
-      max-height: 380px;
-      object-fit: contain;
-    }
-    .question-text {
-      font-size: 22px;
-      font-weight: bold;
-      color: #fff;
-      margin: 10px 0;
-    }
-    input[type="text"] {
-      width: 80%;
-      padding: 8px;
-      margin: 5px;
-      border-radius: 6px;
-      border: 1px solid #555;
-      background: #222;
-      color: #fff;
-    }
+    .btn-buzzer { width: 100%; height: 140px; font-size: 36px; font-weight: bold; background: var(--accent-pink); border-radius: 20px; box-shadow: 0 8px 0 #c0392b; cursor: pointer; margin-top: 10px; color: white; border: none; }
+    .btn-buzzer:active { transform: translateY(4px); box-shadow: 0 4px 0 #c0392b; }
+    .btn-buzzer:disabled { background: #555; box-shadow: none; }
+
+    .scores { display: flex; justify-content: space-around; font-size: 22px; font-weight: bold; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; }
+    .q-progress { color: var(--accent-yellow); font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+    .question-text { font-size: 22px; font-weight: bold; margin: 10px 0; color: #fff; }
+    
+    .media-box { width: 100%; min-height: 180px; background: #000; border-radius: 8px; display: flex; justify-content: center; align-items: center; margin: 10px 0; overflow: hidden; }
+    .media-box img, .media-box video { max-width: 100%; max-height: 300px; object-fit: contain; }
+
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+    .option-item { background: rgba(255,255,255,0.08); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); text-align: left; font-size: 18px; font-weight: bold; }
+    
+    .status-msg { font-size: 24px; color: var(--accent-yellow); font-weight: bold; margin: 15px 0; min-height: 36px; }
+    .admin-panel { margin-top: 20px; border-top: 2px dashed var(--border-color); padding-top: 15px; text-align: center; }
+
+    /* 輸入框與分數設定樣式 */
+    .score-input { width: 70px; padding: 6px; font-size: 16px; text-align: center; border-radius: 6px; border: 1px solid var(--accent-yellow); background: #222; color: #fff; font-weight: bold; }
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -80,52 +64,104 @@
 
   <div class="container">
     <div id="role-select" class="card">
-      <div class="title">請選擇您的身份</div>
-      <button class="btn" onclick="selectRole('host')">我是 主持人</button>
-      <button class="btn" onclick="selectRole('p1')">我是 玩家一 (P1)</button>
-      <button class="btn" onclick="selectRole('p2')">我是 玩家二 (P2)</button>
+      <div class="title">🎮 多媒體搶答系統 - 請選擇角色</div>
+      <button class="btn btn-warning" onclick="selectRole('host')">👑 我是 主持人</button>
+      <button class="btn" onclick="selectRole('p1')">🙋‍♂️ 我是 玩家一 (P1)</button>
+      <button class="btn" onclick="selectRole('p2')">🙋‍♀️ 我是 玩家二 (P2)</button>
     </div>
 
     <div id="game-panel" class="card" style="display: none;">
-      <div id="role-display" style="color: #aaa; margin-bottom: 10px;"></div>
+      <div id="role-display" style="color: #aaa; font-size: 14px; margin-bottom: 8px;"></div>
       
       <div class="scores">
-        <div>P1 得分：<span id="score-p1">0</span></div>
-        <div>P2 得分：<span id="score-p2">0</span></div>
+        <div>P1 分數：<span id="score-p1" style="color:var(--accent-pink)">0</span></div>
+        <div>P2 分數：<span id="score-p2" style="color:var(--accent-blue)">0</span></div>
       </div>
 
-      <div class="question-text" id="q-title">題目：等待主持人出題...</div>
-      <div class="media-box" id="media-container">
-        <span style="color: #777;">（題目多媒體區域）</span>
+      <div style="margin-top: 15px;">
+        <div class="q-progress">
+          <span id="q-number">題目載入中...</span>
+          <span style="color: var(--accent-green); margin-left: 10px;">[ 本題價值：<span id="q-score-display">10</span> 分 ]</span>
+        </div>
+        <div class="question-text" id="q-title">--</div>
       </div>
 
-      <div class="winner-box" id="buzzer-status">等待主持人開放搶答...</div>
+      <div class="media-box" id="media-container"></div>
+
+      <div class="options-grid" id="options-container"></div>
+
+      <div class="status-msg" id="buzzer-status">等待主持人開始...</div>
 
       <div id="player-controls" style="display: none;">
-        <button id="buzzer-btn" class="btn-buzzer" onclick="pressBuzzer()" disabled>搶答！</button>
+        <button id="buzzer-btn" class="btn-buzzer" onclick="pressBuzzer()" disabled>⚡ 搶 答 ⚡</button>
       </div>
 
-      <div id="host-controls" style="display: none; margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-        <div style="margin-bottom: 10px; font-weight: bold; color: var(--accent-yellow);">【主持人題目與控制台】</div>
+      <div id="host-controls" class="admin-panel" style="display: none;">
+        <div style="font-weight: bold; color: var(--accent-yellow); margin-bottom: 10px;">🛠️ 主持人專用後台面板</div>
         
-        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-          <input type="text" id="input-q" placeholder="請輸入題目文字"><br>
-          <input type="text" id="input-media" placeholder="請貼上圖片/影片網址 (URL)"><br>
-          <button class="btn" onclick="updateQuestion()">發布題目</button>
+        <div style="margin-bottom: 12px;">
+          <button class="btn" onclick="prevQuestion()">⬅️ 上一題</button>
+          <button class="btn" onclick="nextQuestion()">下一題 ➡️</button>
+          <button class="btn btn-success" onclick="enableBuzzer()">⚡ 開放搶答</button>
+          <button class="btn btn-danger" onclick="resetBuzzer()">🔄 重置搶答</button>
         </div>
 
-        <button class="btn btn-success" onclick="enableBuzzer()">開放搶答</button>
-        <button class="btn btn-danger" onclick="resetBuzzer()">重置搶答</button>
-        <br><br>
-        <button class="btn" onclick="addScore('p1', 10)">P1 +10分</button>
-        <button class="btn" onclick="addScore('p1', -10)">P1 -10分</button>
-        <button class="btn" onclick="addScore('p2', 10)">P2 +10分</button>
-        <button class="btn" onclick="addScore('p2', -10)">P2 -10分</button>
+        <div style="background: rgba(245, 166, 35, 0.1); border: 1px solid var(--accent-yellow); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
+          <label style="font-weight: bold; color: var(--accent-yellow);">⚙️ 設定本題得分/扣分分值：</label>
+          <input type="number" id="input-q-score" class="score-input" value="10" min="1" max="100"> 分
+          <button class="btn btn-warning" onclick="updateCurrentQScore()" style="padding: 5px 12px; font-size: 14px;">更新配分</button>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 12px;">
+          <div style="font-size: 14px; color: #ccc; margin-bottom: 5px;">搶答判定（點擊自動播放音效與依配分加減）：</div>
+          <button class="btn btn-success" onclick="judgeAnswer(true)">⭕ 判定答對</button>
+          <button class="btn btn-danger" onclick="judgeAnswer(false)">❌ 判定答錯</button>
+        </div>
+
+        <div>
+          <div style="font-size: 14px; color: #ccc; margin-bottom: 5px;">微調玩家總分：</div>
+          <button class="btn" onclick="addScore('p1', 5)">P1 +5</button>
+          <button class="btn" onclick="addScore('p1', -5)">P1 -5</button>
+          <button class="btn" onclick="addScore('p2', 5)">P2 +5</button>
+          <button class="btn" onclick="addScore('p2', -5)">P2 -5</button>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
+    // 預設題庫設定 (預設每題也可獨立設定 score 數值)
+    const QUESTIONS = [
+      {
+        id: 1,
+        title: "請問圖片中的這隻動物是什麼名字？",
+        media: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=500",
+        options: ["A. 柴犬", "B. 柯基", "C. 哈士奇", "D. 貴賓狗"],
+        answer: "A",
+        score: 10
+      },
+      {
+        id: 2,
+        title: "台灣最高的高山是哪一座山？",
+        media: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500",
+        options: ["A. 雪山", "B. 玉山", "C. 阿里山", "D. 陽明山"],
+        answer: "B",
+        score: 20
+      },
+      {
+        id: 3,
+        title: "請聽短片中的音樂，這是哪一位作曲家的作品？",
+        media: "https://www.w3schools.com/html/mov_bbb.mp4",
+        options: ["A. 莫札特", "B. 貝多芬", "C. 蕭邦", "D. 巴哈"],
+        answer: "B",
+        score: 30
+      }
+    ];
+
+    const soundCorrect = new Audio("https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg");
+    const soundWrong = new Audio("https://actions.google.com/sounds/v1/cartoon/boing.ogg");
+    const soundBuzzer = new Audio("https://actions.google.com/sounds/v1/emergency/beeps_high.ogg");
+
     const firebaseConfig = {
       apiKey: "AIzaSyC3ogiRnUkzdvHLQvZABgfDtTmacyzX6nw",
       authDomain: "my-game-d36e6.firebaseapp.com",
@@ -147,58 +183,75 @@
       document.getElementById('game-panel').style.display = 'block';
 
       if (role === 'host') {
-        document.getElementById('role-display').innerText = "當前身份：主持人";
+        document.getElementById('role-display').innerText = "當前身份：👑 主持人控制台";
         document.getElementById('host-controls').style.display = 'block';
       } else {
-        document.getElementById('role-display').innerText = `當前身份：${role === 'p1' ? '玩家一' : '玩家二'}`;
+        document.getElementById('role-display').innerText = `當前身份：${role === 'p1' ? '🙋‍♂️ 玩家一 (P1)' : '🙋‍♀️ 玩家二 (P2)'}`;
         document.getElementById('player-controls').style.display = 'block';
       }
 
       listenToDatabase();
     }
 
-    // 監聯 Firebase 資料庫變動（即時同步）
     function listenToDatabase() {
       db.ref('gameState').on('value', (snapshot) => {
         const data = snapshot.val() || {};
 
-        // 更新分數
         document.getElementById('score-p1').innerText = data.p1Score || 0;
         document.getElementById('score-p2').innerText = data.p2Score || 0;
 
-        // 更新題目與多媒體
-        document.getElementById('q-title').innerText = data.questionText || "題目：等待主持人出題...";
-        const mediaBox = document.getElementById('media-container');
-        if (data.mediaUrl) {
-          const url = data.mediaUrl.toLowerCase();
-          if (url.endsWith('.mp4') || url.endsWith('.webm') || url.includes('video')) {
-            mediaBox.innerHTML = `<video src="${data.mediaUrl}" controls autoplay loop muted></video>`;
-          } else {
-            mediaBox.innerHTML = `<img src="${data.mediaUrl}" alt="題目圖片">`;
-          }
-        } else {
-          mediaBox.innerHTML = `<span style="color: #777;">（無多媒體檔案）</span>`;
+        const qIndex = data.currentQIndex || 0;
+        const currentQ = QUESTIONS[qIndex];
+
+        // 讀取當前題目配分（預設為該題 score 或主持人設定的值）
+        const currentQScore = data.customQScore !== undefined ? data.customQScore : (currentQ.score || 10);
+        document.getElementById('q-score-display').innerText = currentQScore;
+        
+        // 更新主持人後台的輸入框顯示
+        const scoreInput = document.getElementById('input-q-score');
+        if (scoreInput && document.activeElement !== scoreInput) {
+          scoreInput.value = currentQScore;
         }
 
-        // 更新搶答狀態
+        document.getElementById('q-number').innerText = `第 ${qIndex + 1} / ${QUESTIONS.length} 題`;
+        document.getElementById('q-title').innerText = currentQ.title;
+
+        const mediaBox = document.getElementById('media-container');
+        if (currentQ.media) {
+          const url = currentQ.media.toLowerCase();
+          if (url.endsWith('.mp4') || url.endsWith('.webm') || url.includes('video')) {
+            mediaBox.innerHTML = `<video src="${currentQ.media}" controls autoplay loop muted></video>`;
+          } else {
+            mediaBox.innerHTML = `<img src="${currentQ.media}" alt="題目圖片">`;
+          }
+        } else {
+          mediaBox.innerHTML = `<span style="color: #777;">（無多媒體內容）</span>`;
+        }
+
+        const optsContainer = document.getElementById('options-container');
+        optsContainer.innerHTML = currentQ.options.map(opt => `<div class="option-item">${opt}</div>`).join('');
+
         const buzzerBtn = document.getElementById('buzzer-btn');
         const statusBox = document.getElementById('buzzer-status');
 
+        if (data.lastAction === 'sound_correct') soundCorrect.play();
+        if (data.lastAction === 'sound_wrong') soundWrong.play();
+
         if (data.winner) {
-          statusBox.innerText = `🎉 搶答成功：${data.winner === 'p1' ? '玩家一 (P1)' : '玩家二 (P2)'}`;
+          statusBox.innerText = `🚨 ${data.winner === 'p1' ? '玩家一 (P1)' : '玩家二 (P2)'} 搶答成功！請回答選項！`;
           if (buzzerBtn) buzzerBtn.disabled = true;
         } else if (data.buzzerActive) {
-          statusBox.innerText = "⚡ 搶答開始！請快速按鍵！";
+          statusBox.innerText = "⚡ 搶答開放中！快按搶答鍵！";
           if (buzzerBtn) buzzerBtn.disabled = false;
         } else {
-          statusBox.innerText = "🔒 搶答尚未開放 / 已重置";
+          statusBox.innerText = "🔒 等待主持人開放搶答...";
           if (buzzerBtn) buzzerBtn.disabled = true;
         }
       });
     }
 
-    // 玩家搶答
     function pressBuzzer() {
+      soundBuzzer.play();
       db.ref('gameState').transaction((state) => {
         if (state && state.buzzerActive && !state.winner) {
           state.winner = myRole;
@@ -208,39 +261,75 @@
       });
     }
 
-    // 主持人：發布新題目與媒體
-    function updateQuestion() {
-      const qText = document.getElementById('input-q').value;
-      const mUrl = document.getElementById('input-media').value;
-      db.ref('gameState').update({
-        questionText: qText ? `題目：${qText}` : "題目：等待主持人出題...",
-        mediaUrl: mUrl || "",
-        buzzerActive: false,
-        winner: null
+    // 更新當前題目配分
+    function updateCurrentQScore() {
+      const val = parseInt(document.getElementById('input-q-score').value) || 10;
+      db.ref('gameState').update({ customQScore: val });
+    }
+
+    // 判定答對/答錯（自動根據設定的題目配分加減分）
+    function judgeAnswer(isCorrect) {
+      db.ref('gameState').once('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        const winner = data.winner;
+        if (!winner) return;
+
+        const qIndex = data.currentQIndex || 0;
+        const defaultScore = QUESTIONS[qIndex] ? QUESTIONS[qIndex].score : 10;
+        const qScore = data.customQScore !== undefined ? data.customQScore : defaultScore;
+
+        const delta = isCorrect ? qScore : -qScore;
+        const currentScore = data[`${winner}Score`] || 0;
+        
+        db.ref('gameState').update({
+          [`${winner}Score`]: currentScore + delta,
+          lastAction: isCorrect ? 'sound_correct' : 'sound_wrong',
+          buzzerActive: false,
+          winner: null
+        });
+
+        setTimeout(() => db.ref('gameState/lastAction').set(''), 500);
       });
     }
 
-    // 主持人：開放搶答
+    function nextQuestion() {
+      db.ref('gameState').once('value', (snapshot) => {
+        const currentIdx = (snapshot.val() || {}).currentQIndex || 0;
+        if (currentIdx < QUESTIONS.length - 1) {
+          db.ref('gameState').update({
+            currentQIndex: currentIdx + 1,
+            customQScore: QUESTIONS[currentIdx + 1].score || 10,
+            buzzerActive: false,
+            winner: null
+          });
+        }
+      });
+    }
+
+    function prevQuestion() {
+      db.ref('gameState').once('value', (snapshot) => {
+        const currentIdx = (snapshot.val() || {}).currentQIndex || 0;
+        if (currentIdx > 0) {
+          db.ref('gameState').update({
+            currentQIndex: currentIdx - 1,
+            customQScore: QUESTIONS[currentIdx - 1].score || 10,
+            buzzerActive: false,
+            winner: null
+          });
+        }
+      });
+    }
+
     function enableBuzzer() {
-      db.ref('gameState').update({
-        buzzerActive: true,
-        winner: null
-      });
+      db.ref('gameState').update({ buzzerActive: true, winner: null });
     }
 
-    // 主持人：重置搶答
     function resetBuzzer() {
-      db.ref('gameState').update({
-        buzzerActive: false,
-        winner: null
-      });
+      db.ref('gameState').update({ buzzerActive: false, winner: null });
     }
 
-    // 主持人：加減分
     function addScore(player, amount) {
-      db.ref(`gameState/${player}Score`).transaction((currentScore) => {
-        return (currentScore || 0) + amount;
-      });
+      db.ref(`gameState/${player}Score`).transaction((score) => (score || 0) + amount);
     }
   </script>
 </body>
